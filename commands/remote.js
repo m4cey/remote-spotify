@@ -7,9 +7,9 @@ module.exports = {
 		.setDescription('Start a party and control playback.'),
 	async execute(interaction) {
 		var scopes = ['user-read-private', 'user-read-email'],
-			redirectUri = 'https://localhost:8888/callback',
+			redirectUri = 'https://localhost:3000/callback',
 			clientId = 'dbca940c4d8b43108d852e3ca29b7afb',
-			state = 'some-state-of-my-choice';
+			state = interaction.user.id;
 
 		// Setting credentials can be done in the wrapper's constructor, or using the API object's setters.
 		var spotifyApi = new SpotifyWebApi({

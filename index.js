@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const { Client, Collection, Intents, MessageEmbed } = require('discord.js');
 const { token } = require('./config.json');
-const fastify = require('fastify')({ logger: true });
+const fastify = require('fastify')({ logger: false });
 //const StormDB = require('stormdb');
 
 // Create a new client instance
@@ -18,13 +18,15 @@ for (const file of commandFiles) {
 }
 
 // redirect_uri end point
-fastify.get('/callback/*', async (request, reply) => {
-	console.log(request);
-	return { hello: 'world' };
-})
+fastify.get('/callback', async (request, reply) => {
+	console.log('query:', request.query);
+	console.log('params:', request.params);
+	return { hello: 'world', query: request.query };
+});
+
 const start = async () => {
 	try {
-		await fastify.listen(8888);
+		await fastify.listen(3000, '0.0.0.0' );
 	} catch (err) {
 		fastify.log.error(err);
 		process.exit(1);
