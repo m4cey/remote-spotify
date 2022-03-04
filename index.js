@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const { Client, Collection, Intents, MessageEmbed } = require('discord.js');
 const { token } = require('./config.json');
+const fastify = require('fastify')({ logger: true });
 //const StormDB = require('stormdb');
 
 // Create a new client instance
@@ -13,12 +14,26 @@ const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('
 
 for (const file of commandFiles) {
 	const command = require(`./commands/${file}`);
-	// Set a new item in the Collection
-	// With the key as the command name and the value as the exported module
 	client.commands.set(command.data.name, command);
 }
 
-// When the client is ready, run this code (only once)
+// redirect_uri end point
+fastify.get('/callback/*', async (request, reply) => {
+	console.log(request);
+	return { hello: 'world' };
+})
+const start = async () => {
+	try {
+		await fastify.listen(8888);
+	} catch (err) {
+		fastify.log.error(err);
+		process.exit(1);
+	}
+}
+start();
+
+
+// When the client and server are ready, run this code (only once)
 
 client.once('ready', () => {
 	console.log('Ready!');
