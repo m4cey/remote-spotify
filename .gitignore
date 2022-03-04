@@ -1,3 +1,7 @@
+# bot stuffs
+config.json
+db.stormdb
+
 # Logs
 logs
 *.log

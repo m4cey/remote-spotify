@@ -1,0 +1,33 @@
+{
+  "dependencies": {
+    "@discordjs/builders": "^0.12.0",
+    "@discordjs/rest": "^0.3.0",
+    "discord-api-types": "^0.27.3",
+    "discord.js": "^13.6.0",
+    "spotify-web-api-node": "^5.0.2",
+    "stormdb": "^0.5.2"
+  },
+  "name": "remote-spotify",
+  "version": "1.0.0",
+  "description": "remote control spotify players",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/m4cey/remote-spotify.git"
+  },
+  "keywords": [
+    "spotify",
+    "discord",
+    "remote",
+    "party"
+  ],
+  "author": "mace#0041",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/m4cey/remote-spotify/issues"
+  },
+  "homepage": "https://github.com/m4cey/remote-spotify#readme"
+}
