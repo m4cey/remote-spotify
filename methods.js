@@ -8,7 +8,7 @@ const db = new StormDB(Engine);
 const remoteMenu = require('./commands/remote.js');
 
 function updateRemote (interaction) {
-    remoteMenu.execute(interaction);
+    interaction.update(remoteMenu.buildMessage(interaction));
 }
 
 function addListener (interaction) {
