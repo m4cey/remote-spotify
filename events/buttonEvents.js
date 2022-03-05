@@ -10,13 +10,11 @@ buttons.joinButton = (interaction) => {
 	if (listening.includes(interaction.user.id))
 		return;
 	const authenticated = db.get('authenticated').value();
-	if (authenticated) {
-		const authIds = Object.keys(authenticated).map(obj => Object.keys(obj)[0]);
-		if (authIds.includes(interaction.user.id))
-			methods.addListener(interaction);
-		return;
-	}
-	methods.generateAuthLink(interaction);
+	const authIds = Object.keys(authenticated).map(obj => Object.keys(obj)[0]);
+	if (authIds.includes(interaction.user.id))
+		methods.addListener(interaction);
+	else
+		methods.generateAuthLink(interaction);
 }
 
 module.exports = {
