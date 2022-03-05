@@ -6,15 +6,23 @@ const db = new StormDB(Engine);
 let buttons = {};
 
 buttons.joinButton = (interaction) => {
+	const db = new StormDB(Engine);
 	const listening = db.get('listening').value();
-	if (listening.includes(interaction.user.id))
+	if (listening.includes(interaction.user.id)) {
+		interaction.reply({ content: "```you're already in the party```", ephemeral: true });
 		return;
+	}
 	const authenticated = db.get('authenticated').value();
-	const authIds = Object.keys(authenticated).map(obj => Object.keys(obj)[0]);
+	const authIds = Object.keys(authenticated);
+	console.log(authIds);
 	if (authIds.includes(interaction.user.id))
 		methods.addListener(interaction);
 	else
 		methods.generateAuthLink(interaction);
+}
+
+buttons.leaveButton = (interaction) => {
+	methods.removeListener(interaction);
 }
 
 module.exports = {

@@ -3,10 +3,8 @@ const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
 const StormDB = require("stormdb");
 const { Engine } = require('../database.js');
 
-const db = new StormDB(Engine);
-db.default({'listening': [], 'authenticated': {} }).save();
-
 function getUserList(interaction) {
+	const db = new StormDB(Engine);
 	const userIds = db.get('listening').value();
 	if (!userIds)	return;
 	let users = '';
@@ -14,6 +12,25 @@ function getUserList(interaction) {
 	return users;
 }
 
+function buildMessage(interaction) {
+	const users = getUserList(interaction);
+	const embed = new MessageEmbed()
+		.setTitle('Now listening')
+		.setDescription(`${users || "```no users listening```"}`)
+	const row = new MessageActionRow()
+		.addComponents(
+			new MessageButton()
+				.setCustomId('join')
+				.setLabel('Join')
+				.setStyle('PRIMARY'),
+			new MessageButton()
+				.setCustomId('leave')
+				.setLabel('Leave')
+				.setStyle('DANGER')
+				.setDisabled(!users)
+		);
+	return { embeds: [embed], components: [row] }
+}
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('remote')
@@ -21,16 +38,9 @@ module.exports = {
 
 	async execute(interaction) {
 		const users = getUserList(interaction);
-		const embed = new MessageEmbed()
-			.setTitle('Now listening')
-			.setDescription(`${users || "```no users listening```"}`)
-		const row = new MessageActionRow()
-			.addComponents(
-				new MessageButton()
-					.setCustomId('join')
-					.setLabel('Join')
-					.setStyle('PRIMARY'),
-			);
-		await interaction.reply({embeds: [embed], components: [row] });
-	}
+		const message = buildMessage(interaction);
+
+		await interaction.reply(message);
+	},
+	buildMessage
 };
