@@ -7,7 +7,7 @@ module.exports = {
 		.setDescription('Start a party and control playback.'),
 	async execute(interaction) {
 		var scopes = ['user-read-private', 'user-read-email'],
-			redirectUri = 'http://free4.alaister.net:27079/callback',
+			redirectUri = 'http://216.27.10.96:27079/callback',
 			clientId = 'dbca940c4d8b43108d852e3ca29b7afb',
 			state = interaction.user.id;
 
