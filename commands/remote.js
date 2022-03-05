@@ -1,11 +1,10 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
-const SpotifyWebApi = require('spotify-web-api-node');
 const StormDB = require("stormdb");
 const { Engine } = require('../database.js');
 
 const db = new StormDB(Engine);
-db.default({'listening': [], 'authenticated': [] }).save();
+db.default({'listening': [], 'authenticated': {} }).save();
 
 function getUserList(interaction) {
 	if (!db.get('listening').value())
@@ -27,7 +26,7 @@ module.exports = {
 		const users = getUserList(interaction);
 		const embed = new MessageEmbed()
 			.setTitle('Now listening')
-			.setDescription(`${users || 'no users listening'}`)
+			.setDescription(`${users || "```no users listening```"}`)
 		const row = new MessageActionRow()
 			.addComponents(
 				new MessageButton()

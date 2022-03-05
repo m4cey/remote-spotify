@@ -1,10 +1,12 @@
 const fastify = require('fastify')({logger: false});
+const methods = require('./methods.js');
 
 fastify.get('/callback', async (request, reply) => {
-	console.log('query:', request.query);
-	console.log('params:', request.params);
-	reply.send({ query: request.query });
-	return(reply);
+	if (!request.query || request.query.error)
+		console.log('query failed! reason: ', request.query.error);
+	else
+		methods.setTokens(request.query);
+	return;
 });
 
 const startServer = async () => {
