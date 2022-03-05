@@ -11,6 +11,12 @@ function updateRemote (interaction) {
     interaction.update(remoteMenu.buildMessage(interaction));
 }
 
+function isListener (userId) {
+    const db = new StormDB(Engine);
+	  const listening = db.get('listening').value();
+    return listening.includes(userId);
+}
+
 function addListener (interaction) {
     const db = new StormDB(Engine);
     console.log('Adding listener ' + interaction.user.tag);
@@ -74,4 +80,4 @@ function setTokens (data) {
     );
 }
 
-module.exports = { updateRemote, addListener, removeListener, generateAuthLink, setTokens };
+module.exports = { updateRemote, isListener, addListener, removeListener, generateAuthLink, setTokens };

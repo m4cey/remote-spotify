@@ -1,5 +1,6 @@
 const StormDB = require("stormdb");
 const methods = require('../methods.js');
+const state = require('../state.js');
 const { Engine } = require('../database.js');
 const db = new StormDB(Engine);
 
@@ -7,8 +8,7 @@ let buttons = {};
 
 buttons.joinButton = (interaction) => {
 	const db = new StormDB(Engine);
-	const listening = db.get('listening').value();
-	if (listening.includes(interaction.user.id)) {
+	if (methods.isListener(interaction.user.id)) {
 		interaction.reply({ content: "```you're already in the party```", ephemeral: true });
 		return;
 	}
@@ -23,6 +23,30 @@ buttons.joinButton = (interaction) => {
 
 buttons.leaveButton = (interaction) => {
 	methods.removeListener(interaction);
+}
+
+buttons.playButton = (interaction) => {
+	if (!methods.isListener(interaction.user.id)) return;
+	state.setPlaying(!state.isPlaying());
+	methods.updateRemote(interaction);
+}
+
+buttons.previousButton = (interaction) => {
+	if (!methods.isListener(interaction.user.id)) return;
+	state.previousTrack();
+	methods.updateRemote(interaction);
+}
+
+buttons.nextButton = (interaction) => {
+	if (!methods.isListener(interaction.user.id)) return;
+	state.nextTrack();
+	methods.updateRemote(interaction);
+}
+
+buttons.likeButton = (interaction) => {
+	if (!methods.isListener(interaction.user.id)) return 0;
+	state.likeTrack(interaction);
+	methods.updateRemote(interaction);
 }
 
 module.exports = {
