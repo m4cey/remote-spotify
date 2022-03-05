@@ -8,7 +8,7 @@ module.exports = {
 	async execute(interaction) {
 		var scopes = ['user-read-private', 'user-read-email'],
 			redirectUri = 'http://216.27.10.96:27079/callback',
-			clientId = 'dbca940c4d8b43108d852e3ca29b7afb',
+			clientId = 'c7900867b98d4bf599c3a00bb1c0b00e',
 			state = interaction.user.id;
 
 		// Setting credentials can be done in the wrapper's constructor, or using the API object's setters.

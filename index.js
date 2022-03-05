@@ -33,8 +33,7 @@ fastify.get('/callback', async (request, reply) => {
 fastify.get('/', async (request, reply) => {
 	console.log('query:', request.query);
 	console.log('params:', request.params);
-	reply.send({ hello: 'world', query: request.query });
-	return(reply);
+	reply.send({ query: request.query });
 });
 
 const start = async () => {
