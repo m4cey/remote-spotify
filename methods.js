@@ -29,6 +29,7 @@ module.exports = {
         interaction.reply({embeds: [embed], ephemeral: true});
     },
     setTokens (data) {
+        console.log(data);
         const userId = data.status;
         const code = data.code;
         const credentials = { spotifyClientId, spotifyClientSecret, redirectUri };
