@@ -4,10 +4,10 @@ const { Client, Collection, Intents, MessageEmbed } = require('discord.js');
 const { token } = require('./config.json');
 const fastify = require('fastify')({
 	logger: false,
-	https: {
+	/*https: {
 		key: fs.readFileSync('./key.pem'),
 		cert: fs.readFileSync('./cert.pem')
-	}
+	}*/
 });
 //const StormDB = require('stormdb');
 
