@@ -29,10 +29,11 @@ module.exports = {
         interaction.reply({embeds: [embed], ephemeral: true});
     },
     setTokens (data) {
+        console.log(data);
         const userId = data.state;
         const code = data.code;
-        console.log(code, userId);
-        const credentials = { spotifyClientId, spotifyClientSecret, redirectUri };
+        const credentials = { clientId: spotifyClientId,
+            clientSecret: spotifyClientSecret, redirectUri: redirectUri };
         const spotifyApi = new SpotifyWebApi(credentials);
 
         spotifyApi.authorizationCodeGrant(code).then(
