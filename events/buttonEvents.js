@@ -9,12 +9,14 @@ buttons.joinButton = (interaction) => {
 	const listening = db.get('listening').value();
 	if (listening.includes(interaction.user.id))
 		return;
-	const authIds = db.get('authenticated').value().map(obj => Object.keys(obj)[0]);
-	if (authIds.includes(interaction.user.id))
-		methods.addListener(interaction);
-	else {
-		methods.generateAuthLink(interaction);
+	const authenticated = db.get('authenticated').value();
+	if (authenticated) {
+		const authIds = Object.keys(authenticated).map(obj => Object.keys(obj)[0]);
+		if (authIds.includes(interaction.user.id))
+			methods.addListener(interaction);
+		return;
 	}
+	methods.generateAuthLink(interaction);
 }
 
 module.exports = {
