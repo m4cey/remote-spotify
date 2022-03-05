@@ -7,13 +7,10 @@ const db = new StormDB(Engine);
 db.default({'listening': [], 'authenticated': {} }).save();
 
 function getUserList(interaction) {
-	if (!db.get('listening').value())
-		return;
-	const usersID = Object.keys(db.get('listening').value());
+	const userIds = db.get('listening').value();
+	if (!userIds)	return;
 	let users = '';
-	if (usersID) {
-		usersID.forEach(user => users += '<@' + user + '>\n')
-	}
+	userIds.forEach(user => users += '<@' + user + '>\n')
 	return users;
 }
 
