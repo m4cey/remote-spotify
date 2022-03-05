@@ -20,8 +20,4 @@ function likeTrack (interaction) {
     console.log( interaction.user.tag +' Liked the track!');
 }
 
-function getTrack (userId) {
-
-}
-
 module.exports = { isPlaying, setPlaying, previousTrack, nextTrack, likeTrack };
