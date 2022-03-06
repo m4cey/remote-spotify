@@ -36,7 +36,7 @@ function removeListener (interaction) {
 }
 
 function postGuide (interaction) {
-    const url = "http://localhost:8080/guide"
+    const url = "http://216.27.10.96:27056/guide"
     const embed = new MessageEmbed()
         .setTitle('Authentication required')
         .setDescription("visit the link for an easy guide")
