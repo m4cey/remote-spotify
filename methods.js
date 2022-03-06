@@ -37,49 +37,12 @@ function removeListener (interaction) {
 }
 
 function generateAuthLink (interaction) {
-    const scopes = ['ugc-image-upload', 'user-read-playback-state',
-        'user-modify-playback-state', 'user-read-private', 'user-follow-modify',
-        'user-follow-read', 'user-library-modify', 'user-library-read',
-        'user-read-playback-position', 'playlist-modify-private',
-        'playlist-read-collaborative', 'playlist-read-private',
-        'playlist-modify-public', 'user-read-currently-playing'],
-        state = interaction.user.id;
-
-    const spotifyApi = new SpotifyWebApi({
-        redirectUri: redirectUri,
-        clientId: spotifyClientId
-        });
-    const authorizeURL = spotifyApi.createAuthorizeURL(scopes, state);
+    const authorizeURL = "https://open.spotify.com/get_access_token?reason=transport&productType=web_player";
     const embed = new MessageEmbed()
-        .setTitle('Authentication required')
-        .setDescription('you can try to join again after logging in')
+        .setTitle('Access Token required')
+        .setDescription("copy the ```accessToken``` content and use it to login with `/login`")
         .setURL(authorizeURL);
     interaction.reply({embeds: [embed], ephemeral: true});
 }
-
-function setTokens (data) {
-    console.log(data);
-    const userId = data.state;
-    const code = data.code;
-    const credentials = { clientId: spotifyClientId,
-        clientSecret: spotifyClientSecret, redirectUri: redirectUri };
-    const spotifyApi = new SpotifyWebApi(credentials);
-
-    spotifyApi.authorizationCodeGrant(code).then(
-        function (data) {
-            console.log('The token expires in ' + data.body['expires_in']);
-            console.log('The access token is ' + data.body['access_token']);
-            console.log('The refresh token is ' + data.body['refresh_token']);
-            const tokens = { 'accessToken': data.body['access_token'],
-                'refreshToken': data.body['refresh_token'] };
-            db.get('authenticated').get(userId).set(tokens).save();
-        },
-        function (err) {
-            console.log('Code grant failed!', err);
-        }
-    );
-}
-
-
 
 module.exports = { updateRemote, isListener, addListener, removeListener, generateAuthLink, setTokens };
