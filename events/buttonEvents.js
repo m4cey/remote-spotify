@@ -29,6 +29,12 @@ buttons.playButton = (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return;
 	state.setPlaying(!state.isPlaying());
 	methods.updateRemote(interaction);
+	methods.batchExecute((spotifyApi, token, userId) => {
+		if (state.isPlaying())
+			spotifyApi.pause();
+		else
+			spotifyApi.play();
+	});
 }
 
 buttons.previousButton = (interaction) => {

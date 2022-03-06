@@ -1,4 +1,3 @@
-const methods = require('./methods.js');
 const StormDB = require("stormdb");
 const { Engine } = require('./database.js');
 

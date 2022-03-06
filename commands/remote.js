@@ -2,7 +2,7 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
 const StormDB = require("stormdb");
 const { Engine } = require('../database.js');
-const state = require('../state');
+const state = require('../state.js');
 
 function getUserList(interaction) {
 	const db = new StormDB(Engine);
@@ -13,7 +13,7 @@ function getUserList(interaction) {
 	return users;
 }
 
-function buildMessage(interaction) {
+function remoteMessage (interaction) {
 	const users = getUserList(interaction);
 	const embed = new MessageEmbed()
 		.setTitle('Now listening')
@@ -51,16 +51,18 @@ function buildMessage(interaction) {
 		);
 	return { embeds: [embed], components: [playbackRow, partyRow] }
 }
+
 module.exports = {
+	remoteMessage,
+
 	data: new SlashCommandBuilder()
 		.setName('remote')
 		.setDescription('Start a party and control playback.'),
 
 	async execute(interaction) {
 		const users = getUserList(interaction);
-		const message = buildMessage(interaction);
+		const message = remoteMessage(interaction);
 
 		await interaction.reply(message);
-	},
-	buildMessage
+	}
 };
