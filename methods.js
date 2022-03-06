@@ -1,3 +1,4 @@
+const https = require('https');
 const { spotifyClientId, spotifyClientSecret, redirectUri } = require('./config.json');
 const SpotifyWebApi = require('spotify-web-api-node');
 const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
@@ -43,17 +44,49 @@ function postGuide (interaction) {
     interaction.reply({embeds: [embed], ephemeral: true});
 }
 
+function getToken (userId) {
+    const db = new StormDB(Engine);
+    const cookie = db.get('authenticated').get(userId).value();
+    const options = {
+        hostname: 'open.spotify.com',
+        path: '/get_access_token?reason=transport&productType=web_player',
+        method: 'GET',
+        headers: {
+            'Cookie': cookie,
+            'User-Agent': 'Mozilla/5.0',
+        }
+    };
+    const req = https.request(options, res => {
+        console.log(`statusCode: ${res.statusCode}`);
+        console.log(`headers: ${JSON.stringify(res.headers)}`);
+        let data = '';
+        res.on('data', (chunk) => {
+            data = data + chunk.toString();
+        });
+
+        res.on('end', () => {
+            const body = JSON.parse(data);
+            return (body.accessToken);
+        });
+    });
+    req.on('error', error => {
+      console.error(error);
+    });
+
+    req.end();
+}
+
 function batchExecute(callback) {
     const spotifyApi = new SpotifyWebApi();
     const db = new StormDB(Engine);
 
     const listening = db.get('listening').value();
     listening.forEach(userId => {
-        const token = db.get('authenticated').get(userId).value();
+        const token = getToken(userId);
         console.log(`<@${userId}>: `, token);
         spotifyApi.setAccessToken(token);
         callback(spotifyApi, token, userId);
     });
 }
 
-module.exports = { updateRemote, isListener, addListener, removeListener, generateAuthLink, batchExecute };
+module.exports = { updateRemote, isListener, addListener, removeListener, postGuide, batchExecute };

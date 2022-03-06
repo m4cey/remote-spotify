@@ -18,7 +18,7 @@ buttons.joinButton = (interaction) => {
 	if (authIds.includes(interaction.user.id))
 		methods.addListener(interaction);
 	else
-		methods.generateAuthLink(interaction);
+		methods.postGuide(interaction);
 }
 
 buttons.leaveButton = (interaction) => {
