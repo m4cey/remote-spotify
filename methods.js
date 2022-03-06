@@ -64,6 +64,17 @@ async function getToken (userId) {
     }
 }
 
+function execute(userId, callback) {
+    const spotifyApi = new SpotifyWebApi();
+    const db = new StormDB(Engine);
+
+    getToken(userId).then(token => {
+        spotifyApi.setAccessToken(token);
+        //console.log(`<@${userId}>: `, token);
+        callback(spotifyApi, token, userId);
+    });
+}
+
 function batchExecute(callback) {
     const spotifyApi = new SpotifyWebApi();
     const db = new StormDB(Engine);
@@ -72,10 +83,10 @@ function batchExecute(callback) {
     listening.forEach(userId => {
         getToken(userId).then(token => {
 		        spotifyApi.setAccessToken(token);
-            console.log(`<@${userId}>: `, token);
-            callback(spotifyApi, userId);
+            //console.log(`<@${userId}>: `, token);
+            callback(spotifyApi, token, userId);
         });
     });
 }
 
-module.exports = { updateRemote, isListener, addListener, removeListener, postGuide, batchExecute, getToken };
+module.exports = { updateRemote, isListener, addListener, removeListener, postGuide, batchExecute, execute, getToken };

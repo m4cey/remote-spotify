@@ -27,32 +27,58 @@ buttons.leaveButton = (interaction) => {
 
 buttons.playButton = (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return;
-	state.setPlaying(!state.isPlaying());
 	methods.updateRemote(interaction);
-	methods.batchExecute((spotifyApi, userId) => {
-		if (state.isPlaying())
-			spotifyApi.pause();
-		else
-			spotifyApi.play();
+	const leader = db.get('listening').value()[0];
+	let leaderToken;
+	methods.batchExecute((spotifyApi, token, userId) => {
+		if (userId == leader)
+			leaderToken = token;
+		spotifyApi.setAccessToken(leaderToken);
+		spotifyApi.getMyCurrentPlaybackState().then(data => {
+			spotifyApi.setAccessToken(token);
+			if (data.body && data.body.is_playing) {
+				state.setPlaying(false);
+				spotifyApi.pause();
+			}
+			else {
+				state.setPlaying(true);
+				spotifyApi.play();
+			}
+		});
 	});
 }
 
 buttons.previousButton = (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return;
-	state.previousTrack();
 	methods.updateRemote(interaction);
+	methods.batchExecute((spotifyApi, token, userId) => {
+		spotifyApi.skipToPrevious().then(() => state.previousTrack());
+	});
 }
 
 buttons.nextButton = (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return;
-	state.nextTrack();
 	methods.updateRemote(interaction);
+	methods.batchExecute((spotifyApi, token, userId) => {
+		spotifyApi.skipToNext().then(() => state.nextTrack());
+	});
 }
 
 buttons.likeButton = (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return 0;
-	state.likeTrack(interaction);
 	methods.updateRemote(interaction);
+	methods.execute(interaction.user.id, (spotifyApi, token, userId) => {
+		spotifyApi.getMyCurrentPlaybackState().then(data => {
+			return data.body.item.id;
+		}).then(id => {
+			spotifyApi.containsMySavedTracks([id]).then((data, id) => {
+				if (data.body[0])
+					spotifyApi.removeFromMySavedTracks([data.id]);
+				else
+					spotifyApi.addToMySavedTracks([data.id])
+			});
+		});
+	});
 }
 
 module.exports = {
