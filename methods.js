@@ -1,4 +1,4 @@
-const https = require('https');
+const axios = require('axios').default;
 const { spotifyClientId, spotifyClientSecret, redirectUri } = require('./config.json');
 const SpotifyWebApi = require('spotify-web-api-node');
 const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
@@ -44,36 +44,24 @@ function postGuide (interaction) {
     interaction.reply({embeds: [embed], ephemeral: true});
 }
 
-function getToken (userId) {
+async function getToken (userId) {
     const db = new StormDB(Engine);
     const cookie = db.get('authenticated').get(userId).value();
     const options = {
-        hostname: 'open.spotify.com',
-        path: '/get_access_token?reason=transport&productType=web_player',
+        baseURL: 'https://open.spotify.com',
+        url: '/get_access_token?reason=transport&productType=web_player',
         method: 'GET',
         headers: {
             'Cookie': cookie,
             'User-Agent': 'Mozilla/5.0',
         }
     };
-    const req = https.request(options, res => {
-        console.log(`statusCode: ${res.statusCode}`);
-        console.log(`headers: ${JSON.stringify(res.headers)}`);
-        let data = '';
-        res.on('data', (chunk) => {
-            data = data + chunk.toString();
-        });
-
-        res.on('end', () => {
-            const body = JSON.parse(data);
-            return (body.accessToken);
-        });
-    });
-    req.on('error', error => {
-      console.error(error);
-    });
-
-    req.end();
+    try {
+        const res = await axios(options);
+        return (res.data.accessToken);
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 function batchExecute(callback) {
@@ -82,11 +70,12 @@ function batchExecute(callback) {
 
     const listening = db.get('listening').value();
     listening.forEach(userId => {
-        const token = getToken(userId);
-        console.log(`<@${userId}>: `, token);
-        spotifyApi.setAccessToken(token);
-        callback(spotifyApi, token, userId);
+        getToken(userId).then(token => {
+		        spotifyApi.setAccessToken(token);
+            console.log(`<@${userId}>: `, token);
+            callback(spotifyApi, userId);
+        });
     });
 }
 
-module.exports = { updateRemote, isListener, addListener, removeListener, postGuide, batchExecute };
+module.exports = { updateRemote, isListener, addListener, removeListener, postGuide, batchExecute, getToken };
