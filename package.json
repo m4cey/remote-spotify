@@ -4,6 +4,7 @@
     "@discordjs/rest": "^0.3.0",
     "discord-api-types": "^0.27.3",
     "discord.js": "^13.6.0",
+    "fastify": "^3.27.2",
     "spotify-web-api-node": "^5.0.2",
     "stormdb": "^0.5.2"
   },

@@ -34,12 +34,12 @@ function removeListener (interaction) {
     updateRemote(interaction);
 }
 
-function generateAuthLink (interaction) {
-    const authorizeURL = "https://open.spotify.com/get_access_token?reason=transport&productType=web_player";
+function postGuide (interaction) {
+    const url = "http://localhost:8080/guide"
     const embed = new MessageEmbed()
-        .setTitle('Access Token required')
-        .setDescription("copy the contents of `accessToken` and use it with `/login`")
-        .setURL(authorizeURL);
+        .setTitle('Authentication required')
+        .setDescription("visit the link for an easy guide")
+        .setURL(url);
     interaction.reply({embeds: [embed], ephemeral: true});
 }
 
