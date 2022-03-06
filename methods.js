@@ -45,4 +45,8 @@ function generateAuthLink (interaction) {
     interaction.reply({embeds: [embed], ephemeral: true});
 }
 
-module.exports = { updateRemote, isListener, addListener, removeListener, generateAuthLink, setTokens };
+function batchExecute (callback) {
+
+}
+
+module.exports = { updateRemote, isListener, addListener, removeListener, generateAuthLink, batchExecute };

@@ -1,7 +1,6 @@
 const fs = require('node:fs');
 const { Client, Collection, Intents, MessageEmbed } = require('discord.js');
 const { token } = require('./config.json');
-const { startServer } = require('./server.js');
 //const StormDB = require('stormdb');
 
 // Create a new client instance
@@ -27,5 +26,4 @@ for (const file of eventFiles) {
 }
 
 // Login to Discord with your client's token
-startServer();
 client.login(token);
