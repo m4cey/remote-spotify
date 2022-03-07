@@ -18,7 +18,7 @@ module.exports = {
 			await interaction.deferReply();
 			console.log(`interaction ${interaction.id} has been deferred`);
 			const db = new StormDB(Engine);
-			const cookies = interaction.options.getString('cookies');
+			const cookies = encodeURIComponent(interaction.options.getString('cookies'));
 			let success = false;
 			if (cookies) {
 				const oldCookies = db.get('authenticated').get(interaction.user.id).value();
