@@ -13,13 +13,18 @@ module.exports = {
 
 	async execute(interaction) {
 		try {
-			//await interaction.deferReply();
+			console.log(`interaction ${interaction.id} beggining deferral`);
+			await interaction.deferReply();
+			console.log(`interaction ${interaction.id} has been deferred`);
 			const users = methods.getUserList(interaction);
 			const message = await methods.remoteMessage(interaction);
-			await interaction.reply(message);
+			await interaction.editReply(message);
 		} catch (error) {
 			console.log(error);
-			await interaction.reply({ content: 'not feeling like it rn' });
+			const embed = new MessageEmbed()
+				.setTitle('Remote failed')
+				.setDescription('not feeling like it rn');
+			await interaction.reply({ embeds: [embed] });
 		}
 	}
 };

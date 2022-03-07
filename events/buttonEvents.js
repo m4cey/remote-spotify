@@ -9,7 +9,8 @@ let buttons = {};
 buttons.joinButton = async (interaction) => {
 	const db = new StormDB(Engine);
 	if (methods.isListener(interaction.user.id)) {
-		const message = { content: "`you're already in the party`", ephemeral: true };
+		const message = { embeds: [{title: "you're already in the party",
+			description: "wake up!" }], ephemeral: true };
 		interaction.followUp(message);
 		return;
 	}

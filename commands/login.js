@@ -13,12 +13,15 @@ module.exports = {
 					.setDescription('the cookies generated on your browser when visiting open.spotify.com')
 					.setRequired(true)),
 	async execute(interaction) {
-		//await interaction.deferReply();
 		try {
+			console.log(`interaction ${interaction.id} beggining deferral`);
+			await interaction.deferReply();
+			console.log(`interaction ${interaction.id} has been deferred`);
 			const db = new StormDB(Engine);
 			const cookies = interaction.options.getString('cookies');
 			let success = false;
 			if (cookies) {
+				const oldCookies = db.get('authenticated').get(interaction.user.id).value();
 				db.get('authenticated').get(interaction.user.id).set(cookies).save();
 				try {
 					const token = await methods.getToken(interaction.user.id);
@@ -26,9 +29,19 @@ module.exports = {
 						success = true
 				} catch (error) {
 					console.log(error);
-					db.get('authenticated').get(interaction.user.id).delete();
+					if (oldCookies)
+						db.get('authenticated').get(interaction.user.id).set(oldCookies);
+					else
+						db.get('authenticated').get(interaction.user.id).delete();
 					db.save();
 					success = false;
+				}
+				if (!success) {
+					if (oldCookies)
+						db.get('authenticated').get(interaction.user.id).set(oldCookies);
+					else
+						db.get('authenticated').get(interaction.user.id).delete();
+					db.save();
 				}
 			}
 			const embed = new MessageEmbed()
@@ -36,10 +49,13 @@ module.exports = {
 				.setDescription(success ? 'fine ig, you can join a party' :
 				'it\'s rotten cookies, I will fucking kill you');
 
-			await interaction.reply({ embeds: [embed] });
+			await interaction.editReply({ embeds: [embed] });
 		} catch (error) {
 			console.log(error);
-			await interaction.reply({ content: 'not feeling like it rn' });
+			const embed = new MessageEmbed()
+				.setTitle('Remote failed')
+				.setDescription('not feeling like it rn');
+			await interaction.reply({ embeds: [embed] });
 		}
 	}
 };

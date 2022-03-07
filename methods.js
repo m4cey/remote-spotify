@@ -128,7 +128,7 @@ async function remoteMessage (interaction) {
     const users = getUserList(interaction);
     let data = await getPlayingTrack();
     if (!data) {
-        data = { title: 'nothing', artists: 'nobody', cover: 'https://picsum.photos/800' };
+        data = { title: 'nothing', artists: 'nobody', cover: 'https://picsum.photos/id/1025/800' };
         data.is_playing = await isPlaying();
     }
     const embed = new MessageEmbed()
