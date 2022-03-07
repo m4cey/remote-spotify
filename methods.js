@@ -32,6 +32,7 @@ async function getToken (userId) {
     };
     try {
         const res = await axios(options);
+        console.log("token request status: ", res.statusText, res.status);
         return (res.data.accessToken);
     } catch (error) {
         console.log(error);

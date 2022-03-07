@@ -9,8 +9,8 @@ module.exports = {
 		.setName('login')
 		.setDescription('register your credentials with a cookie string')
 		.addStringOption(option =>
-				option.setName('cookies')
-					.setDescription('the cookies generated on your browser when visiting open.spotify.com')
+				option.setName('cookie')
+					.setDescription('the [sp_dc] cookie generated on your browser when visiting open.spotify.com')
 					.setRequired(true)),
 	async execute(interaction) {
 		try {
@@ -18,27 +18,29 @@ module.exports = {
 			await interaction.deferReply();
 			console.log(`interaction ${interaction.id} has been deferred`);
 			const db = new StormDB(Engine);
-			const cookies = encodeURIComponent(interaction.options.getString('cookies'));
+			const cookie = `sp_dc=${interaction.options.getString('cookie')};`;
+			console.log(cookie);
 			let success = false;
-			if (cookies) {
-				const oldCookies = db.get('authenticated').get(interaction.user.id).value();
-				db.get('authenticated').get(interaction.user.id).set(cookies).save();
+			if (cookie) {
+				const oldCookie = db.get('authenticated').get(interaction.user.id).value();
+				db.get('authenticated').get(interaction.user.id).set(cookie).save();
 				try {
 					const token = await methods.getToken(interaction.user.id);
-					if (token.length >= 312)
+					console.log("TOKEN: ", token);
+					if (token && token.length >= 312)
 						success = true
 				} catch (error) {
 					console.log(error);
-					if (oldCookies)
-						db.get('authenticated').get(interaction.user.id).set(oldCookies);
+					if (oldCookie)
+						db.get('authenticated').get(interaction.user.id).set(oldCookie);
 					else
 						db.get('authenticated').get(interaction.user.id).delete();
 					db.save();
 					success = false;
 				}
 				if (!success) {
-					if (oldCookies)
-						db.get('authenticated').get(interaction.user.id).set(oldCookies);
+					if (oldCookie)
+						db.get('authenticated').get(interaction.user.id).set(oldCookie);
 					else
 						db.get('authenticated').get(interaction.user.id).delete();
 					db.save();
@@ -47,7 +49,7 @@ module.exports = {
 			const embed = new MessageEmbed()
 				.setTitle(success ? 'Logged in' : 'Login failed')
 				.setDescription(success ? 'fine ig, you can join a party' :
-				'it\'s rotten cookies, I will fucking kill you');
+				'it\'s a rotten cookie, I will fucking kill you');
 
 			await interaction.editReply({ embeds: [embed] });
 		} catch (error) {
