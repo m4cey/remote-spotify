@@ -71,6 +71,21 @@ buttons.nextButton = async (interaction) => {
 	});
 }
 
+buttons.likeButton = async (interaction) => {
+	if (!methods.isListener(interaction.user.id)) return;
+	await methods.execute(interaction.user.id, async (spotifyApi, token, userId) => {
+		try {
+			const data = await methods.trackIsSaved(userId);
+			if (data.is_saved)
+				await spotifyApi.removeFromMySavedTracks([data.id]);
+			else
+				await spotifyApi.addToMySavedTracks([data.id]);
+		} catch (error) {
+			console.log(error);
+		}
+	});
+}
+
 module.exports = {
 	name: 'interactionCreate',
 	async execute(interaction) {
@@ -81,7 +96,6 @@ module.exports = {
 			await interaction.deferUpdate();
 			console.log(`interaction ${interaction.id} has been deferred`);
 			await buttons[interaction.customId + 'Button'](interaction);
-			await wait(2000);
 			await methods.updateRemote(interaction);
 		} catch (error) {
 			console.log(error);

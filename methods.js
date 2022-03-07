@@ -49,7 +49,7 @@ async function execute (userId, callback) {
         //console.log(`<@${userId}>: `, token);
         await callback(spotifyApi, token, userId);
     } catch (error) {
-        console.log(error);
+        console.log("in execute(): ", error);
     }
 }
 
@@ -57,8 +57,8 @@ async function batchExecute (callback) {
     const spotifyApi = new SpotifyWebApi();
     const db = new StormDB(Engine);
 
-    const listening = db.get('listening').value();
-    await listening.forEach(async userId => {
+    const userIds = db.get('listening').value();
+    for (userId of userIds) {
         try {
             const token = await getToken(userId);
             await spotifyApi.setAccessToken(token);
@@ -67,14 +67,18 @@ async function batchExecute (callback) {
         } catch (error) {
             console.log(error);
         }
-    });
+    }
+}
+
+function getLeaderId() {
+    const db = new StormDB(Engine);
+    return leaderId = db.get('listening').value()[0];
 }
 
 async function isPlaying () {
     const spotifyApi = new SpotifyWebApi();
-    const db = new StormDB(Engine);
 
-    const leaderId = db.get('listening').value()[0];
+    const leaderId = getLeaderId();
     if (leaderId) {
         try {
             const token = await getToken(leaderId);
@@ -89,21 +93,23 @@ async function isPlaying () {
     return (false);
 }
 
-async function getPlayingTrack () {
+async function getPlayingTrack (userId) {
     const spotifyApi = new SpotifyWebApi();
-    const db = new StormDB(Engine);
 
-    const leaderId = db.get('listening').value()[0];
-    if (leaderId) {
+    userId = userId || getLeaderId();
+    if (userId) {
         try {
-            const token = await getToken(leaderId);
+            const token = await getToken(userId);
             spotifyApi.setAccessToken(token);
             const data = await spotifyApi.getMyCurrentPlaybackState();
             const res = {
                 artists: data.body.item.artists.map(obj => obj.name).toString(),
                 title: data.body.item.name,
                 cover: data.body.item.album.images[0].url || '',
-                is_playing: data.body.is_playing
+                id: data.body.item.id,
+                context: { type: data.body.context.type, uri: data.body.context.uri },
+                is_playing: data.body.is_playing,
+                is_active: data.body.device.is_active
             };
             console.log(res);
             return (res);
@@ -113,20 +119,56 @@ async function getPlayingTrack () {
     }
 }
 
-function getUserList(interaction) {
-	const db = new StormDB(Engine);
-	const userIds = db.get('listening').value();
+async function trackIsSaved(userId) {
+    const spotifyApi = new SpotifyWebApi();
 
-	if (!userIds)	return;
-	let users = '';
-	userIds.forEach(user => {
-      users += "<@" + user + ">\n\n";
-  })
-	return users;
+    if (userId) {
+        try {
+            const token = await getToken(userId);
+            spotifyApi.setAccessToken(token);
+            const track = await getPlayingTrack();
+            const data = await spotifyApi.containsMySavedTracks([track.id]);
+            return ({ id: track.id, is_saved: data.body[0] });
+        } catch (error) {
+            console.log("In trackIsSaved():", error);
+        }
+    }
+}
+
+async function getUsername(interaction, userId) {
+    if (userId) {
+        const member = await interaction.guild.members.fetch(userId);
+        return (member.nickname || member.user.username);
+    }
+}
+
+async function getUserList(interaction) {
+    const spotifyApi = new SpotifyWebApi();
+    const db = new StormDB(Engine);
+    const userIds = db.get('listening').value();
+
+    if (!userIds)	return;
+    let users = '';
+    for (userId of userIds) {
+        try {
+            let suffix = '';
+            const { is_saved } = await trackIsSaved(userId);
+            console.log('is saved:', is_saved);
+            suffix = is_saved ? '(❤️)' : '';
+            const name = await getUsername(interaction, userId);
+            console.log(name);
+            users += `${name}${suffix}\n`;
+        } catch (error) {
+            console.log('User fetch', error);
+            users += 'a dumbass\n';
+        }
+    }
+    return users;
 }
 
 async function remoteMessage (interaction) {
-    const users = getUserList(interaction);
+    const users = await getUserList(interaction);
+    console.log(users);
     let data = await getPlayingTrack();
     if (!data) {
         data = { title: 'nothing', artists: 'nobody', cover: 'https://picsum.photos/id/1025/800' };
@@ -136,7 +178,7 @@ async function remoteMessage (interaction) {
         .setTitle(`Now Playing:`)
         .setDescription(`\`\`\`${data.title} by ${data.artists}\`\`\``)
         .setThumbnail(data.cover)
-        .addField("Listening:", `${users || "```no users listening```"}`)
+        .addField("**Listening:**", `\`\`\`${users || "no users listening"}\`\`\``)
     const partyRow = new MessageActionRow()
         .addComponents(
         new MessageButton()
@@ -163,6 +205,10 @@ async function remoteMessage (interaction) {
             .setCustomId('next')
             .setLabel("⏭️")
             .setStyle('SECONDARY'),
+        new MessageButton()
+            .setCustomId('like')
+            .setLabel("❤️")
+            .setStyle('SECONDARY'),
         );
     return { embeds: [embed], components: [playbackRow, partyRow] }
 }
@@ -176,8 +222,8 @@ async function updateRemote (interaction) {
 
 function isListener (userId) {
     const db = new StormDB(Engine);
-	  const listening = db.get('listening').value();
-    return listening.includes(userId);
+	  const userIds = db.get('listening').value();
+    return userIds.includes(userId);
 }
 
 function addListener (interaction) {
@@ -190,9 +236,9 @@ function addListener (interaction) {
 function removeListener (interaction) {
     const db = new StormDB(Engine);
     console.log('Removing listener ' + interaction.user.tag);
-    const listening = db.get('listening').value();
-    if (!listening) return;
-    const newListeners = listening.filter(user => user != interaction.user.id);
+    const userIds = db.get('listening').value();
+    if (!userIds) return;
+    const newListeners = userIds.filter(user => user != interaction.user.id);
     db.get('listening').set(newListeners).save();
     console.log(db.get('listening').value());
     updateRemote(interaction);
@@ -210,5 +256,8 @@ module.exports = {
     apiError,
     isPlaying,
     remoteMessage,
-    getUserList
+    getUserList,
+    trackIsSaved,
+    getUsername,
+    getPlayingTrack
 };

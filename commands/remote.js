@@ -5,7 +5,6 @@ const StormDB = require("stormdb");
 const { Engine } = require('../database.js');
 const methods = require('../methods.js');
 
-
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('remote')
@@ -16,7 +15,7 @@ module.exports = {
 			console.log(`interaction ${interaction.id} beggining deferral`);
 			await interaction.deferReply();
 			console.log(`interaction ${interaction.id} has been deferred`);
-			const users = methods.getUserList(interaction);
+			const users = await methods.getUserList(interaction);
 			const message = await methods.remoteMessage(interaction);
 			await interaction.editReply(message);
 		} catch (error) {
