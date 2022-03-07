@@ -12,10 +12,14 @@ module.exports = {
 		.setDescription('Start a party and control playback.'),
 
 	async execute(interaction) {
-		//if (!interaction.deffered)
+		try {
 		await interaction.deferReply();
 		const users = methods.getUserList(interaction);
 		const message = await methods.remoteMessage(interaction);
 		await interaction.editReply(message);
+		} catch (error) {
+			console.log(error);
+			interaction.reply({ content: 'not feeling like it rn' });
+		}
 	}
 };
