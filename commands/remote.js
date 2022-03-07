@@ -19,7 +19,7 @@ module.exports = {
 			await interaction.reply(message);
 		} catch (error) {
 			console.log(error);
-			interaction.reply({ content: 'not feeling like it rn' });
+			await interaction.reply({ content: 'not feeling like it rn' });
 		}
 	}
 };
