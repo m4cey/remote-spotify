@@ -76,7 +76,9 @@ module.exports = {
 		if (!interaction.isButton())	return;
 		console.log(`${interaction.user.tag} in #${interaction.channel.name} triggered a button: ${interaction.customId}`);
 		try {
+			console.log(`interaction ${interaction.id} beggining deferral`);
 			await interaction.deferUpdate();
+			console.log(`interaction ${interaction.id} has been deferred`);
 			await buttons[interaction.customId + 'Button'](interaction);
 			await methods.updateRemote(interaction);
 			await methods.updateRemote(interaction);
