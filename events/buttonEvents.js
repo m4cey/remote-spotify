@@ -48,17 +48,25 @@ buttons.playButton = async (interaction) => {
 		});
 }
 
-buttons.previousButton = (interaction) => {
+buttons.previousButton = async (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return;
-	methods.batchExecute((spotifyApi, token, userId) => {
-		spotifyApi.skipToPrevious().then(methods.updateRemote(interaction), methods.apiError);
+	await methods.batchExecute(async (spotifyApi, token, userId) => {
+		try {
+			await spotifyApi.skipToPrevious();
+		} catch (error) {
+			console.log(error);
+		}
 	});
 }
 
-buttons.nextButton = (interaction) => {
+buttons.nextButton = async (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return;
-	methods.batchExecute((spotifyApi, token, userId) => {
-		spotifyApi.skipToNext().then(methods.updateRemote(interaction), methods.apiError);
+	await methods.batchExecute(async (spotifyApi, token, userId) => {
+		try {
+			await spotifyApi.skipToNext();
+		} catch (error) {
+			console.log(error);
+		}
 	});
 }
 
@@ -67,9 +75,13 @@ module.exports = {
 	async execute(interaction) {
 		if (!interaction.isButton())	return;
 		console.log(`${interaction.user.tag} in #${interaction.channel.name} triggered a button: ${interaction.customId}`);
-		await interaction.deferUpdate();
-		await methods.updateRemote(interaction);
-		await buttons[interaction.customId + 'Button'](interaction);
-		await methods.updateRemote(interaction);
+		try {
+			await interaction.deferUpdate();
+			await buttons[interaction.customId + 'Button'](interaction);
+			await methods.updateRemote(interaction);
+			await methods.updateRemote(interaction);
+		} catch (error) {
+			console.log(error);
+		}
 	},
 };

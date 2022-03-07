@@ -98,13 +98,14 @@ async function getPlayingTrack () {
             const token = await getToken(leaderId);
             spotifyApi.setAccessToken(token);
             const data = await spotifyApi.getMyCurrentPlaybackState();
-            console.log(data.item);
             const res = {
-                artists: data.item.artists.map(obj => obj.name),
-                title: data.item.name,
-                cover: data.item.album.images[0] || ''
+                artists: data.body.item.artists.map(obj => obj.name).toString(),
+                title: data.body.item.name,
+                cover: data.body.item.album.images[0].url || '',
+                is_playing: data.body.is_playing
             };
-            return (data.body.is_playing);
+            console.log(res);
+            return (res);
         } catch (error) {
             console.log(error);
         }
@@ -125,13 +126,15 @@ function getUserList(interaction) {
 
 async function remoteMessage (interaction) {
     const users = getUserList(interaction);
-    let track = await getPlayingTrack();
-    if (!track)
-        track = { title: 'nothing', artists: 'nobody', cover: 'https://picsum.photos/800' };
+    let data = await getPlayingTrack();
+    if (!data) {
+        data = { title: 'nothing', artists: 'nobody', cover: 'https://picsum.photos/800' };
+        data.is_playing = await isPlaying();
+    }
     const embed = new MessageEmbed()
         .setTitle(`Now Playing:`)
-        .setDescription(`\`\`\`${track.title} by ${track.artists.toString()}\`\`\``)
-        .setThumbnail(track.cover)
+        .setDescription(`\`\`\`${data.title} by ${data.artists}\`\`\``)
+        .setThumbnail(data.cover)
         .addField("Listening:", `${users || "```no users listening```"}`)
     const partyRow = new MessageActionRow()
         .addComponents(
@@ -145,7 +148,6 @@ async function remoteMessage (interaction) {
             .setStyle('DANGER')
             .setDisabled(!users)
         );
-    const is_playing = await isPlaying();
     const playbackRow = new MessageActionRow()
         .addComponents(
         new MessageButton()
@@ -154,8 +156,8 @@ async function remoteMessage (interaction) {
             .setStyle('SECONDARY'),
         new MessageButton()
             .setCustomId('play')
-            .setLabel(is_playing ? "⏸️" : "▶️")
-            .setStyle(is_playing ? 'SUCCESS' : 'SECONDARY'),
+            .setLabel(data.is_playing ? "⏸️" : "▶️")
+            .setStyle(data.is_playing ? 'SUCCESS' : 'SECONDARY'),
         new MessageButton()
             .setCustomId('next')
             .setLabel("⏭️")
