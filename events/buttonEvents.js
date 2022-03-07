@@ -81,7 +81,7 @@ module.exports = {
 			await interaction.deferUpdate();
 			console.log(`interaction ${interaction.id} has been deferred`);
 			await buttons[interaction.customId + 'Button'](interaction);
-			await wait(1000);
+			await wait(2000);
 			await methods.updateRemote(interaction);
 		} catch (error) {
 			console.log(error);
