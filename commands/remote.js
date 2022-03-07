@@ -1,68 +1,21 @@
+const wait = require('node:timers/promises').setTimeout;
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
 const StormDB = require("stormdb");
 const { Engine } = require('../database.js');
-const state = require('../state.js');
+const methods = require('../methods.js');
 
-function getUserList(interaction) {
-	const db = new StormDB(Engine);
-	const userIds = db.get('listening').value();
-	if (!userIds)	return;
-	let users = '';
-	userIds.forEach(user => users += '<@' + user + '>\n')
-	return users;
-}
-
-function remoteMessage (interaction) {
-	const users = getUserList(interaction);
-	const embed = new MessageEmbed()
-		.setTitle('Now listening')
-		.setDescription(`${users || "```no users listening```"}`)
-	const partyRow = new MessageActionRow()
-		.addComponents(
-			new MessageButton()
-				.setCustomId('join')
-				.setLabel('Join')
-				.setStyle('PRIMARY'),
-			new MessageButton()
-				.setCustomId('leave')
-				.setLabel('Leave')
-				.setStyle('DANGER')
-				.setDisabled(!users)
-		);
-	const playbackRow = new MessageActionRow()
-		.addComponents(
-			new MessageButton()
-				.setCustomId('previous')
-				.setLabel("⏮️")
-				.setStyle('SECONDARY'),
-			new MessageButton()
-				.setCustomId('play')
-				.setLabel(state.isPlaying() ? "⏸️" : "▶️")
-				.setStyle(state.isPlaying() ? 'SUCCESS' : 'SECONDARY'),
-			new MessageButton()
-				.setCustomId('next')
-				.setLabel("⏭️")
-				.setStyle('SECONDARY'),
-			new MessageButton()
-				.setCustomId('like')
-				.setLabel("❤️")
-				.setStyle('SECONDARY'),
-		);
-	return { embeds: [embed], components: [playbackRow, partyRow] }
-}
 
 module.exports = {
-	remoteMessage,
-
 	data: new SlashCommandBuilder()
 		.setName('remote')
 		.setDescription('Start a party and control playback.'),
 
 	async execute(interaction) {
-		const users = getUserList(interaction);
-		const message = remoteMessage(interaction);
-
-		await interaction.reply(message);
+		//if (!interaction.deffered)
+		await interaction.deferReply();
+		const users = methods.getUserList(interaction);
+		const message = await methods.remoteMessage(interaction);
+		await interaction.editReply(message);
 	}
 };

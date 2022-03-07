@@ -1,15 +1,16 @@
+const wait = require('node:timers/promises').setTimeout;
 const StormDB = require("stormdb");
 const methods = require('../methods.js');
-const state = require('../state.js');
 const { Engine } = require('../database.js');
 const db = new StormDB(Engine);
 
 let buttons = {};
 
-buttons.joinButton = (interaction) => {
+buttons.joinButton = async (interaction) => {
 	const db = new StormDB(Engine);
 	if (methods.isListener(interaction.user.id)) {
-		interaction.reply({ content: "```you're already in the party```", ephemeral: true });
+		const message = { content: "`you're already in the party`", ephemeral: true };
+		interaction.followUp(message);
 		return;
 	}
 	const authenticated = db.get('authenticated').value();
@@ -25,68 +26,50 @@ buttons.leaveButton = (interaction) => {
 	methods.removeListener(interaction);
 }
 
-buttons.playButton = (interaction) => {
+buttons.playButton = async (interaction) => {
+	const db = new StormDB(Engine);
 	if (!methods.isListener(interaction.user.id)) return;
-	methods.updateRemote(interaction);
-	const leader = db.get('listening').value()[0];
+	const leaderId = db.get('listening').value()[0];
 	let leaderToken;
-	methods.batchExecute((spotifyApi, token, userId) => {
-		if (userId == leader)
+	await methods.batchExecute(async (spotifyApi, token, userId) => {
+		if (userId == leaderId)
 			leaderToken = token;
-		spotifyApi.setAccessToken(leaderToken);
-		spotifyApi.getMyCurrentPlaybackState().then(data => {
-			spotifyApi.setAccessToken(token);
-			if (data.body && data.body.is_playing) {
-				state.setPlaying(false);
-				spotifyApi.pause();
-			}
-			else {
-				state.setPlaying(true);
-				spotifyApi.play();
+		try {
+			await spotifyApi.setAccessToken(leaderToken);
+			const data = await spotifyApi.getMyCurrentPlaybackState();
+			await spotifyApi.setAccessToken(token);
+			if (data.body && data.body.is_playing)
+				await spotifyApi.pause();
+			else
+				await spotifyApi.play();
+			} catch (error) {
+				console.log(error);
 			}
 		});
-	});
 }
 
 buttons.previousButton = (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return;
-	methods.updateRemote(interaction);
 	methods.batchExecute((spotifyApi, token, userId) => {
-		spotifyApi.skipToPrevious().then(() => state.previousTrack());
+		spotifyApi.skipToPrevious().then(methods.updateRemote(interaction), methods.apiError);
 	});
 }
 
 buttons.nextButton = (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return;
-	methods.updateRemote(interaction);
 	methods.batchExecute((spotifyApi, token, userId) => {
-		spotifyApi.skipToNext().then(() => state.nextTrack());
-	});
-}
-
-buttons.likeButton = (interaction) => {
-	if (!methods.isListener(interaction.user.id)) return 0;
-	methods.updateRemote(interaction);
-	methods.execute(interaction.user.id, (spotifyApi, token, userId) => {
-		spotifyApi.getMyCurrentPlaybackState().then(data => {
-			return data.body.item.id;
-		}).then(id => {
-			spotifyApi.containsMySavedTracks([id]).then((data, id) => {
-				if (data.body[0])
-					spotifyApi.removeFromMySavedTracks([data.id]);
-				else
-					spotifyApi.addToMySavedTracks([data.id])
-			});
-		});
+		spotifyApi.skipToNext().then(methods.updateRemote(interaction), methods.apiError);
 	});
 }
 
 module.exports = {
 	name: 'interactionCreate',
-	execute(interaction) {
+	async execute(interaction) {
 		if (!interaction.isButton())	return;
 		console.log(`${interaction.user.tag} in #${interaction.channel.name} triggered a button: ${interaction.customId}`);
-
-		buttons[interaction.customId + 'Button'](interaction);
+		await interaction.deferUpdate();
+		await methods.updateRemote(interaction);
+		await buttons[interaction.customId + 'Button'](interaction);
+		await methods.updateRemote(interaction);
 	},
 };
