@@ -154,13 +154,12 @@ async function getUserList(interaction) {
             let suffix = '';
             const { is_saved } = await trackIsSaved(userId);
             console.log('is saved:', is_saved);
-            suffix = is_saved ? '(❤️)' : '';
+            suffix = is_saved ? '[❤️]' : '';
             const name = await getUsername(interaction, userId);
-            console.log(name);
-            users += `${name}${suffix}\n`;
+            users += `>${name} ${suffix}\n`;
         } catch (error) {
             console.log('User fetch', error);
-            users += 'a dumbass\n';
+            users += '>a dumbass\n';
         }
     }
     return users;
@@ -214,9 +213,27 @@ async function remoteMessage (interaction) {
 }
 
 async function updateRemote (interaction) {
-    console.log('updating message...');
+    const db = new StormDB(Engine);
+    const options = db.get('options').value();
+    console.log(options);
+
+    console.log('creating message...');
     const message = await remoteMessage(interaction);
-    await interaction.editReply(message);
+    console.log('message has been created!');
+    let followup = false;
+    if (options.followup) {
+        followup = true;
+        const collection = interaction.channel.messages.cache;
+        let messageLimit = -1 * options.messageLimit;
+        for (let i = -1; i > messageLimit; i-- ) {
+            if (collection.keyAt(i) == interaction.message.id)
+                followup = false;
+        }
+    }
+    if (followup)
+        await interaction.followUp(message);
+    else
+        await interaction.editReply(message);
     console.log('message updated!');
 }
 

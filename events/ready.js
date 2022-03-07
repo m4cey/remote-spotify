@@ -7,7 +7,11 @@ module.exports = {
 	execute(client) {
 		console.log(`Ready! Logged in as ${client.user.tag}`);
 		const db = new StormDB(Engine);
-		db.default({'listening': [], 'authenticated': {} }).save();
+		db.default({
+			'listening': [],
+			'authenticated': {},
+			'options': { 'followup': true, 'messageLimit': 6 }
+		}).save();
 		db.get('listening').set([]).save();
 	},
 };
