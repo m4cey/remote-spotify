@@ -15,6 +15,7 @@ const startServer = async () => {
   try {
     await fastify.listen(27056, '0.0.0.0')
   } catch (err) {
+    console.log("fastify error")
     fastify.log.error(err)
     process.exit(1)
   }

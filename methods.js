@@ -5,6 +5,11 @@ const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
 const StormDB = require("stormdb");
 const { Engine } = require('./database.js');
 
+const dayjs = require('dayjs');
+const duration = require('dayjs/plugin/duration');
+dayjs().format();
+dayjs.extend(duration);
+
 function apiError() {
     console.log('Something went wrong!');
 }
@@ -109,6 +114,8 @@ async function getPlayingTrack (userId) {
                 title: data.body.item.name,
                 cover: data.body.item.album.images[0].url || '',
                 id: data.body.item.id,
+                duration: data.body.item.duration_ms,
+                progress: data.body.progress_ms,
                 //context: { type: data.body.context.type, uri: data.body.context.uri },
                 is_playing: data.body.is_playing,
                 is_active: data.body.device.is_active
@@ -134,7 +141,8 @@ async function trackIsSaved(userId) {
             const data = await spotifyApi.containsMySavedTracks([track.id]);
             if (!data)
                 throw "Can't connect to Spotify API (2)"
-            return ({ id: track.id, is_saved: data.body[0], is_active: track.is_active });
+            track.is_saved = data.body[0];
+            return (track);
         } catch (error) {
             console.log("In trackIsSaved():", error);
         }
@@ -164,8 +172,20 @@ async function getUserList(interaction) {
             console.log('is saved:', data.is_saved);
             suffix = data.is_saved ? '[❤️]' : '';
             suffix += data.is_active ? '' : '[inactive]';
+            const progress = dayjs.duration(data.progress).format('m:ss');
+            const duration = dayjs.duration(data.duration).format('m:ss');
+            suffix += `[${progress}/${duration}]`;
             const name = await getUsername(interaction, userId);
             users += `>${name} ${suffix}\n`;
+
+            if (!interaction.timeoutTrack) {
+                const delay = data.duration - data.progress + 1000;
+                console.log(`setting song duration timeout for ${delay}ms`);
+                interaction.timeoutTrack = data.id;
+                interaction.timeoutId =
+                    setTimeout(onTrackChange, delay, interaction);
+            }
+
         } catch (error) {
             console.log('in getUserList(): ', error);
             users += '>a dumbass[offline]\n';
@@ -268,6 +288,12 @@ async function updateRemote (interaction) {
         await interaction.client.lastMessage.edit(message);
     }
     console.log('message updated!');
+}
+
+async function onTrackChange (interaction) {
+    console.log("track change update");
+    interaction.client.timeoutTrack = 0;
+    await updateRemote(interaction);
 }
 
 function isListener (userId) {
