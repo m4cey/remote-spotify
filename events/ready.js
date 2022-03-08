@@ -10,7 +10,11 @@ module.exports = {
 		db.default({
 			'listening': [],
 			'authenticated': {},
-			'options': { 'followup': true, 'messageLimit': 2 }
+			'options': {
+				'followup': true,
+				'threshold': 6,
+				'updaterate': 3.0,
+			}
 		}).save();
 		db.get('listening').set([]).save();
 	},

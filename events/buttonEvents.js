@@ -26,6 +26,11 @@ buttons.joinButton = async (interaction) => {
 				console.log('SPOTIFY USER:', data.body.display_name, data.body.email);
 			});
 			methods.addListener(interaction);
+			if (!interaction.client.intervalId)
+				interaction.client.intervalId =
+					setInterval(methods.updateRemote,
+					db.get('options').get('updaterate').value() * 1000
+					|| 3000, interaction);
 		} catch (error) {
 			console.log('in JoinButton(): ', error);
 		}
@@ -36,6 +41,10 @@ buttons.joinButton = async (interaction) => {
 
 buttons.leaveButton = (interaction) => {
 	methods.removeListener(interaction);
+	if (!methods.getLeaderId && interaction.client.intervalId) {
+		clearInterval(interaction.client.intervalId);
+		interaction.client.intervalId = 0;
+	}
 }
 
 buttons.playButton = async (interaction) => {

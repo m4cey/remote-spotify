@@ -109,7 +109,7 @@ async function getPlayingTrack (userId) {
                 title: data.body.item.name,
                 cover: data.body.item.album.images[0].url || '',
                 id: data.body.item.id,
-                context: { type: data.body.context.type, uri: data.body.context.uri },
+                //context: { type: data.body.context.type, uri: data.body.context.uri },
                 is_playing: data.body.is_playing,
                 is_active: data.body.device.is_active
             };
@@ -184,7 +184,7 @@ async function remoteMessage (interaction) {
         data = {
             title: 'nothing',
             artists: 'nobody',
-            cover: `https://via.placeholder.com/150/000000/FFFFFF/?text=${
+            cover: `https://via.placeholder.com/600/000000/FFFFFF/?text=${
                 list[Math.random() * list.length | 0]}!`
         };
         data.is_playing = await isPlaying();
@@ -244,8 +244,8 @@ async function updateRemote (interaction) {
     if (options.followup) {
         followup = true;
         const collection = interaction.channel.messages.cache;
-        let messageLimit = options.messageLimit;
-        for (let i = -1; Math.abs(i) <= messageLimit; i-- ) {
+        let threshold = options.threshold;
+        for (let i = -1; Math.abs(i) <= threshold; i-- ) {
             const message = collection.get(collection.keyAt(i));
             if (message.applicationId == interaction.message.applicationId) {
                 followup = false;
@@ -255,10 +255,12 @@ async function updateRemote (interaction) {
     }
     if (followup) {
         console.log("following up reply...");
+        /*
         interaction.editReply({ embeds: [{
             title: '\u200b',
             description: '***Remote was here***'
         }], components: [] });
+        */
         await interaction.followUp(message);
     } else {
         console.log("edititing reply...");
