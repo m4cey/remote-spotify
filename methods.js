@@ -82,6 +82,8 @@ async function isPlaying () {
             const token = await getToken(leaderId);
             spotifyApi.setAccessToken(token);
             const data = await spotifyApi.getMyCurrentPlaybackState();
+            if (!data)
+                throw "Can't connect to Spotify API"
             return (data.body.is_playing);
         } catch {
             console.log(error);
@@ -100,6 +102,8 @@ async function getPlayingTrack (userId) {
             const token = await getToken(userId);
             spotifyApi.setAccessToken(token);
             const data = await spotifyApi.getMyCurrentPlaybackState();
+            if (!data.body || !data.body.item)
+                throw "Can't connect to Spotify API";
             const res = {
                 artists: data.body.item.artists.map(obj => obj.name).toString(),
                 title: data.body.item.name,
@@ -112,7 +116,7 @@ async function getPlayingTrack (userId) {
             console.log(res);
             return (res);
         } catch (error) {
-            console.log(error);
+            console.log('in getPlayingTrack(): ', error);
         }
     }
 }
@@ -125,7 +129,11 @@ async function trackIsSaved(userId) {
             const token = await getToken(userId);
             spotifyApi.setAccessToken(token);
             const track = await getPlayingTrack();
+            if (!track)
+                throw "Can't connect to Spotify API (1)"
             const data = await spotifyApi.containsMySavedTracks([track.id]);
+            if (!data)
+                throw "Can't connect to Spotify API (2)"
             return ({ id: track.id, is_saved: data.body[0], is_active: track.is_active });
         } catch (error) {
             console.log("In trackIsSaved():", error);
@@ -150,14 +158,16 @@ async function getUserList(interaction) {
     for (userId of userIds) {
         try {
             let suffix = '';
-            const { is_saved, is_active } = await trackIsSaved(userId);
-            console.log('is saved:', is_saved);
-            suffix = is_saved ? '[❤️]' : '';
-            suffix += is_active ? '' : '[inactive]';
+            const data = await trackIsSaved(userId);
+            if (!data)
+                throw "Can't connect to Spotify API"
+            console.log('is saved:', data.is_saved);
+            suffix = data.is_saved ? '[❤️]' : '';
+            suffix += data.is_active ? '' : '[inactive]';
             const name = await getUsername(interaction, userId);
             users += `>${name} ${suffix}\n`;
         } catch (error) {
-            console.log('User fetch', error);
+            console.log('in getUserList(): ', error);
             users += '>a dumbass[offline]\n';
         }
     }
@@ -166,13 +176,17 @@ async function getUserList(interaction) {
 
 async function remoteMessage (interaction) {
     const users = await getUserList(interaction);
-    console.log(users);
+    console.log('LISTENING: ', users);
     let data = await getPlayingTrack();
     if (!data) {
         const list = ['HELP!', 'PLEASE', 'GETMEOUTOFHERE', 'IDONTWANTCOOKIES',
             'SHEHURTSME', 'IWANTOUT', 'CALLCPS', 'HELPME', 'AAAAAAAAAA'];
-        data = { title: 'nothing', artists: 'nobody',
-            cover: `https://via.placeholder.com/150/000000/FFFFFF/?text=${list[Math.random() * list.length | 0]}!` };
+        data = {
+            title: 'nothing',
+            artists: 'nobody',
+            cover: `https://via.placeholder.com/150/000000/FFFFFF/?text=${
+                list[Math.random() * list.length | 0]}!`
+        };
         data.is_playing = await isPlaying();
     }
     const embed = new MessageEmbed()
@@ -241,6 +255,10 @@ async function updateRemote (interaction) {
     }
     if (followup) {
         console.log("following up reply...");
+        interaction.editReply({ embeds: [{
+            title: '\u200b',
+            description: '***Remote was here***'
+        }], components: [] });
         await interaction.followUp(message);
     } else {
         console.log("edititing reply...");

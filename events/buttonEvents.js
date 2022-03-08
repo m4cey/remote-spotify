@@ -21,6 +21,8 @@ buttons.joinButton = async (interaction) => {
 		try {
 			await methods.execute(userId, async (spotifyApi, token, userId) => {
 				const data = await spotifyApi.getMe();
+				if (!data)
+						throw "Can't connect to Spotify API"
 				console.log('SPOTIFY USER:', data.body.display_name, data.body.email);
 			});
 			methods.addListener(interaction);
