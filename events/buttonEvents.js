@@ -14,13 +14,14 @@ buttons.joinButton = async (interaction) => {
 		interaction.followUp(message);
 		return;
 	}
-	const userId = db.get('authenticated').get(interaction.user.id);
-	console.log('USERID: ', userId);
-	if (userId) {
+	const userIds = Object.keys(db.get('authenticated').value());
+	const userId = interaction.user.id;
+	if (userIds.includes(userId)) {
+		console.log('USERID: ', userId);
 		try {
 			await methods.execute(userId, async (spotifyApi, token, userId) => {
 				const data = await spotifyApi.getMe();
-				console.log(data.body);
+				console.log('SPOTIFY USER:', data.body.display_name, data.body.email);
 			});
 			methods.addListener(interaction);
 		} catch (error) {
@@ -94,18 +95,21 @@ buttons.likeButton = async (interaction) => {
 	});
 }
 
+buttons.refreshButton = async (interaction) => {
+	await wait(1000);
+}
+
 module.exports = {
 	name: 'interactionCreate',
 	async execute(interaction) {
 		if (!interaction.isButton())	return;
 		console.log(`${interaction.user.tag} in #${interaction.channel.name} triggered a button: ${interaction.customId}`);
 		try {
-			console.log(interaction.id, 'interaction beggining deferral');
 			await interaction.deferUpdate();
-			console.log(interaction.id, 'interaction has been deferred');
+			console.log(interaction.customId, ':interaction has been deferred');
 			await buttons[interaction.customId + 'Button'](interaction);
-			console.log(interaction.id, 'button function has finished');
-			console.log(interaction.id, 'beggining message update');
+			console.log(interaction.customId, ':button function has finished');
+			console.log(interaction.customId, ':beggining message update');
 			await methods.updateRemote(interaction);
 		} catch (error) {
 			console.log(error);

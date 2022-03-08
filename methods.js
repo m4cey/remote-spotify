@@ -46,7 +46,6 @@ async function execute (userId, callback) {
     try {
         const token = await getToken(userId);
         await spotifyApi.setAccessToken(token);
-        //console.log(`<@${userId}>: `, token);
         await callback(spotifyApi, token, userId);
     } catch (error) {
         console.log("in execute(): ", error);
@@ -62,7 +61,6 @@ async function batchExecute (callback) {
         try {
             const token = await getToken(userId);
             await spotifyApi.setAccessToken(token);
-            //console.log(`<@${userId}>: `, token);
             await callback(spotifyApi, token, userId);
         } catch (error) {
             console.log(error);
@@ -128,7 +126,7 @@ async function trackIsSaved(userId) {
             spotifyApi.setAccessToken(token);
             const track = await getPlayingTrack();
             const data = await spotifyApi.containsMySavedTracks([track.id]);
-            return ({ id: track.id, is_saved: data.body[0] });
+            return ({ id: track.id, is_saved: data.body[0], is_active: track.is_active });
         } catch (error) {
             console.log("In trackIsSaved():", error);
         }
@@ -152,14 +150,15 @@ async function getUserList(interaction) {
     for (userId of userIds) {
         try {
             let suffix = '';
-            const { is_saved } = await trackIsSaved(userId);
+            const { is_saved, is_active } = await trackIsSaved(userId);
             console.log('is saved:', is_saved);
             suffix = is_saved ? '[❤️]' : '';
+            suffix += is_active ? '' : '[inactive]';
             const name = await getUsername(interaction, userId);
             users += `>${name} ${suffix}\n`;
         } catch (error) {
             console.log('User fetch', error);
-            users += '>a dumbass\n';
+            users += '>a dumbass[offline]\n';
         }
     }
     return users;
@@ -170,7 +169,10 @@ async function remoteMessage (interaction) {
     console.log(users);
     let data = await getPlayingTrack();
     if (!data) {
-        data = { title: 'nothing', artists: 'nobody', cover: 'https://picsum.photos/id/1025/800' };
+        const list = ['HELP!', 'PLEASE', 'GETMEOUTOFHERE', 'IDONTWANTCOOKIES',
+            'SHEHURTSME', 'IWANTOUT', 'CALLCPS', 'HELPME', 'AAAAAAAAAA'];
+        data = { title: 'nothing', artists: 'nobody',
+            cover: `https://via.placeholder.com/150/000000/FFFFFF/?text=${list[Math.random() * list.length | 0]}!` };
         data.is_playing = await isPlaying();
     }
     const embed = new MessageEmbed()
@@ -182,13 +184,17 @@ async function remoteMessage (interaction) {
         .addComponents(
         new MessageButton()
             .setCustomId('join')
-            .setLabel('Join')
+            .setLabel('🙋')
             .setStyle('PRIMARY'),
         new MessageButton()
             .setCustomId('leave')
-            .setLabel('Leave')
+            .setLabel('🙅')
             .setStyle('DANGER')
-            .setDisabled(!users)
+            .setDisabled(!users),
+        new MessageButton()
+            .setCustomId('refresh')
+            .setLabel('🧍')
+            .setStyle('SECONDARY')
         );
     const playbackRow = new MessageActionRow()
         .addComponents(
@@ -224,16 +230,22 @@ async function updateRemote (interaction) {
     if (options.followup) {
         followup = true;
         const collection = interaction.channel.messages.cache;
-        let messageLimit = -1 * options.messageLimit;
-        for (let i = -1; i > messageLimit; i-- ) {
-            if (collection.keyAt(i) == interaction.message.id)
+        let messageLimit = options.messageLimit;
+        for (let i = -1; Math.abs(i) <= messageLimit; i-- ) {
+            const message = collection.get(collection.keyAt(i));
+            if (message.applicationId == interaction.message.applicationId) {
                 followup = false;
+                break;
+            }
         }
     }
-    if (followup)
+    if (followup) {
+        console.log("following up reply...");
         await interaction.followUp(message);
-    else
+    } else {
+        console.log("edititing reply...");
         await interaction.editReply(message);
+    }
     console.log('message updated!');
 }
 
