@@ -113,6 +113,7 @@ module.exports = {
 		if (!interaction.isButton()) return;
 		console.log(`${interaction.user.tag} in #${interaction.channel.name} triggered a button: ${interaction.customId}`);
 		try {
+			const db = new StormDB(Engine);
 			await interaction.deferUpdate();
 			console.log(interaction.customId, ':interaction has been deferred');
 			await buttons[interaction.customId + 'Button'](interaction);

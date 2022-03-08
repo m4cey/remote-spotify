@@ -271,19 +271,28 @@ async function updateRemote (interaction, data) {
     interaction.client.lastMessage ??= interaction.message;
 
     console.log('creating message...');
-    const dataParam = data ? true : false;
     data ??= await getUserData(interaction);
     const progressrate = db.get('options.progressrate').value() || 1000;
     if (data.data && !interaction.client.progressId && data.data.is_playing &&
         db.get('options.updaterate').value() > progressrate) {
-        console.log('setting progress update interval');
+        console.log('setting progress interval');
         interaction.client.progressId =
             setInterval(updateProgress, progressrate, interaction, data);
-    } else if (!dataParam) {
-        console.log('clearing progress update interval');
+    } else if (!arguments[1] && data.data.is_playing) {
+        console.log('updating progress interval');
         clearInterval(interaction.client.progressId);
         interaction.client.progressId =
             setInterval(updateProgress, progressrate, interaction, data);
+    }
+    //timeout to update on estimated track change
+    const delay = data.data.duration - data.data.progress + 3000;
+    if (!interaction.client.timeoutId || interaction.client.timeoutDelay > delay) {
+        console.log(`setting song duration timeout of ${dayjs.duration(delay).format('m:ss')}`);
+        interaction.client.timeoutDelay = delay;
+        if (interaction.client.timeoutId)
+            clearTimeout(interaction.client.timeoutId);
+        interaction.client.timeoutId =
+            setTimeout(onTrackChange, delay, interaction);
     }
     const message = await remoteMessage(data);
     console.log('message has been created!');
@@ -308,17 +317,6 @@ async function updateRemote (interaction, data) {
         interaction.editReply(blank);
         interaction.client.lastMessage.edit(blank);
         interaction.client.lastMessage = await interaction.followUp(message);
-
-        //timeout to update on estimated track change
-        const delay = data.data.duration - data.data.progress + 2000;
-        if (!interaction.client.timeoutId || interaction.client.timeoutDelay > delay) {
-            console.log(`setting song duration timeout of ${dayjs.duration(delay).format('m:ss')}`);
-            interaction.client.timeoutDelay = delay;
-            if (interaction.client.timeoutId)
-                clearTimeout(interaction.client.timeoutId);
-            interaction.client.timeoutId =
-                setTimeout(onTrackChange, delay, interaction);
-        }
     } else {
         console.log("edititing reply...");
         await interaction.client.lastMessage.edit(message);
@@ -328,6 +326,7 @@ async function updateRemote (interaction, data) {
 
 async function updateProgress(interaction, data) {
     if (!getLeaderId() || !(data.users.filter(user => user.is_playing).length)) {
+        console.log('clearing progress interval');
         clearInterval(interaction.client.progressId);
         interaction.client.progressId = 0;
         return;
