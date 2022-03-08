@@ -26,11 +26,7 @@ buttons.joinButton = async (interaction) => {
 				console.log('SPOTIFY USER:', data.body.display_name, data.body.email);
 			});
 			methods.addListener(interaction);
-			if (!interaction.client.intervalId)
-				interaction.client.intervalId =
-					setInterval(methods.updateRemote,
-					db.get('options').get('updaterate').value() * 1000
-					|| 3000, interaction);
+			interaction.client.updateOnInterval = true;
 		} catch (error) {
 			console.log('in JoinButton(): ', error);
 		}
@@ -44,6 +40,7 @@ buttons.leaveButton = (interaction) => {
 	if (!methods.getLeaderId && interaction.client.intervalId) {
 		clearInterval(interaction.client.intervalId);
 		interaction.client.intervalId = 0;
+		interaction.client.updateOnInterval = false;
 	}
 }
 
@@ -113,7 +110,7 @@ buttons.refreshButton = async (interaction) => {
 module.exports = {
 	name: 'interactionCreate',
 	async execute(interaction) {
-		if (!interaction.isButton())	return;
+		if (!interaction.isButton()) return;
 		console.log(`${interaction.user.tag} in #${interaction.channel.name} triggered a button: ${interaction.customId}`);
 		try {
 			await interaction.deferUpdate();
@@ -122,6 +119,14 @@ module.exports = {
 			console.log(interaction.customId, ':button function has finished');
 			console.log(interaction.customId, ':beggining message update');
 			await methods.updateRemote(interaction);
+			if (interaction.client.updateOnInterval) {
+					if (interaction.client.intervalId)
+							clearInterval(interaction.client.intervalId)
+				const delay = db.get('options').get('updaterate').value() * 1000 || 3000;
+				console.log(`setting an interval of ${delay} milliseconds`);
+				interaction.client.intervalId =
+					setInterval(methods.updateRemote, delay, interaction);
+			}
 		} catch (error) {
 			console.log(error);
 		}

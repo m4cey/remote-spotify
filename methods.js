@@ -179,8 +179,8 @@ async function remoteMessage (interaction) {
     console.log('LISTENING: ', users);
     let data = await getPlayingTrack();
     if (!data) {
-        const list = ['HELP!', 'PLEASE', 'GETMEOUTOFHERE', 'IDONTWANTCOOKIES',
-            'SHEHURTSME', 'IWANTOUT', 'CALLCPS', 'HELPME', 'AAAAAAAAAA'];
+        const list = ['HELP!', 'PLEASE', 'GETMEOUTOFHERE', 'IDONTEVENWANTCOOKIES',
+            'SHEHURTSME', 'IWANTOUT', 'CALLCPS', 'HELPME', 'AAAAAAAAAAAAAAAAAAAAAAAAA'];
         data = {
             title: 'nothing',
             artists: 'nobody',
@@ -237,6 +237,8 @@ async function updateRemote (interaction) {
     const options = db.get('options').value();
     console.log(options);
 
+    interaction.client.lastMessage ??= interaction.message;
+
     console.log('creating message...');
     const message = await remoteMessage(interaction);
     console.log('message has been created!');
@@ -255,16 +257,15 @@ async function updateRemote (interaction) {
     }
     if (followup) {
         console.log("following up reply...");
-        /*
-        interaction.editReply({ embeds: [{
-            title: '\u200b',
+        const blank = { embeds: [{
             description: '***Remote was here***'
-        }], components: [] });
-        */
-        await interaction.followUp(message);
+        }], components: [] };
+        interaction.editReply(blank);
+        interaction.client.lastMessage.edit(blank);
+        interaction.client.lastMessage = await interaction.followUp(message);
     } else {
         console.log("edititing reply...");
-        await interaction.editReply(message);
+        await interaction.client.lastMessage.edit(message);
     }
     console.log('message updated!');
 }
