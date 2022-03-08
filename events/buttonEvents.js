@@ -122,7 +122,7 @@ module.exports = {
 			if (interaction.client.updateOnInterval) {
 					if (interaction.client.intervalId)
 							clearInterval(interaction.client.intervalId)
-				const delay = db.get('options').get('updaterate').value() * 1000 || 3000;
+				const delay = db.get('options.updaterate').value() || 5000;
 				console.log(`setting an interval of ${delay} milliseconds`);
 				interaction.client.intervalId =
 					setInterval(methods.updateRemote, delay, interaction);

@@ -30,6 +30,14 @@ module.exports = {
 				option
 				.setName('threshold')
 				.setDescription('a whole number bigger than 0')
+				.setRequired(true)))
+		.addSubcommand(subcommand =>
+			subcommand.setName('progressrate')
+			.setDescription('the progress update rate')
+			.addNumberOption(option =>
+				option
+				.setName('rate')
+				.setDescription('rate in seconds, eg: 1, 2.5, etc')
 				.setRequired(true))),
 
 	async execute(interaction) {
@@ -39,7 +47,8 @@ module.exports = {
 		let value;
 		switch (option) {
 			case 'updaterate':
-				value = interaction.options.getNumber('rate');
+			case 'progressrate':
+				value = 1000 * interaction.options.getNumber('rate');
 				break;
 			case 'followup':
 				value = interaction.options.getBoolean('enabled');

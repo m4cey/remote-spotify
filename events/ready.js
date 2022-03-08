@@ -13,7 +13,8 @@ module.exports = {
 			'options': {
 				'followup': true,
 				'threshold': 6,
-				'updaterate': 3.0,
+				'updaterate': 5000,
+				'progressrate': 1000,
 			}
 		}).save();
 		db.get('listening').set([]).save();
