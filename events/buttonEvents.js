@@ -99,9 +99,9 @@ buttons.likeButton = async (interaction) => {
 		try {
 			const data = await methods.trackIsSaved(userId);
 			if (data.is_saved)
-				await spotifyApi.removeFromMySavedTracks([data.id]);
+				await spotifyApi.removeFromMySavedTracks([data.track.id]);
 			else
-				await spotifyApi.addToMySavedTracks([data.id]);
+				await spotifyApi.addToMySavedTracks([data.track.id]);
 		} catch (error) {
 			console.log(error);
 		}
@@ -121,10 +121,8 @@ module.exports = {
 		try {
 			const db = new StormDB(Engine);
 			await interaction.deferUpdate();
-			console.log(interaction.customId, ':interaction has been deferred');
 			await buttons[interaction.customId + 'Button'](interaction);
-			console.log(interaction.customId, ':button function has finished');
-			console.log(interaction.customId, ':beggining message update');
+			//console.log(interaction.customId, ':button function has finished');
 			await methods.updateRemote(interaction);
 			if (interaction.client.updateOnInterval) {
 				if (interaction.client.intervalId)

@@ -122,7 +122,7 @@ async function getPlayingTrack (userId) {
             spotifyApi.setAccessToken(token);
             const data = await spotifyApi.getMyCurrentPlaybackState();
             validateResponse(data);
-            const res = {
+            let res = {
                 artists: data.body.item.artists.map(obj => obj.name).toString(),
                 title: data.body.item.name,
                 cover: data.body.item.album.images[0].url,
@@ -141,12 +141,10 @@ async function getPlayingTrack (userId) {
                     type: data.body.item.album?.album_type,
                     id: data.body.item.album?.id,
                     url: data.body.item.album?.external_urls.spotify,
-                    cover: data.body.item.album?.images[1].url,
                 },
                 artist: {
                     name: data.body.item.artists?.[0].name,
                     url: data.body.item.artists?.[0].external_urls.spotify,
-                    cover: data.body.item.artists?.[0].images?.[0].url,
                 }
             };
             if (res.context.type == 'playlist') {
@@ -158,11 +156,10 @@ async function getPlayingTrack (userId) {
                     collaborative: data.body.collaborative,
                     public: data.body.public,
                     name: data.body.name,
-                    cover: data.body.images[0].url,
                     url: data.body.external_urls.spotify
                 }
             }
-            console.log(res);
+            //console.log(res);
             return (res);
         } catch (error) {
             console.log('in getPlayingTrack(): ', error);
@@ -180,7 +177,7 @@ async function trackIsSaved(userId) {
         try {
             const token = await getToken(userId);
             spotifyApi.setAccessToken(token);
-            const track = await getPlayingTrack();
+            let track = await getPlayingTrack(userId);
             if (!track)
                 throw "track object is null";
             const data = await spotifyApi.containsMySavedTracks([track.track.id]);
@@ -210,25 +207,21 @@ async function getUserData(interaction) {
 
     if (!userIds)	return;
     let users = [];
-    let leaderData;
+    console.log("getUserData()");
+    console.log("userIds =", userIds.length);
     for (userId of userIds) {
         try {
-            let suffix = '';
-            const data = await trackIsSaved(userId);
+            let data = await trackIsSaved(userId);
             if (!data)
                 throw "data object is null";
-            if (userId == userIds[0])
-                leaderData = data;
-            suffix = data.is_saved ? '[❤️]' : '';
-            suffix += data.is_playing ? '' : '[◼]';
-            const name = await getUsername(interaction, userId);
-            data.name = name + suffix;
+            data.name = await getUsername(interaction, userId);
             users.push(data);
         } catch (error) {
-            console.log('in getUserData(): ', error);
+            console.log('in getUserData().loop: ', error);
         }
     }
-    return { data: leaderData, users: users };
+    console.log("users =", users.length);
+    return users;
 }
 
 function getContextData(data) {
@@ -236,11 +229,11 @@ function getContextData(data) {
     try {
         if (!data) throw "data object is null";
         if (!data.context) throw "data.context is null";
+        if (!data.context.type) throw "data.context.type is null";
         const type = data.context.type;
         context = {
             name: `${type.replace(/^\w/, c => c.toUpperCase())}: ${data[type].name}`,
             url: data[type].url,
-            iconUrl: data[type].cover
         };
     } catch (error) {
         console.log('In getContextData():', error);
@@ -254,40 +247,41 @@ function formatNameList(data) {
         return 'no users listening';
     let users = '';
     for (user of data) {
+        let suffix = user.is_saved ? '[❤️]' : '';
+        suffix += user.is_playing ? '' : '[◼]';
         if (user.duration) {
             const progress = dayjs.duration(user.progress).format('m:ss');
             const duration = dayjs.duration(user.duration).format('m:ss');
-            users  += `>${user.name}[${progress}/${duration}]\n`;
+            users  += `>${user.name}${suffix}[${progress}/${duration}]\n`;
         } else
-            users += `${user.name}\n`;
+            users += `${user.name}${suffix}\n`;
     }
     return users;
 }
 
-async function remoteMessage (userData) {
-    const users = formatNameList(userData.users);
-    const userCount = userData.users.length;
-    console.log('LISTENING: ', users, userCount);
-    let data = userData.data;
-    const context = getContextData(data);
+async function remoteMessage (data) {
+    const users = formatNameList(data);
+    const userCount = data.length;
+    console.log('LISTENING:\n', users);
+    const context = getContextData(data[0]);
     console.log("CONTEXT:", context);
-    if (!data) {
+    if (!data[0]) {
         const list = ['HELP!', 'PLEASE', 'GETMEOUTOFHERE', 'JUSTKEEPURCOOKIES',
             'SHEHURTSME', 'IWANTOUT', 'CALLCPS', 'HELPME', 'AAAAAAAAAAAAAAAAAAAAAAAAA'];
-        data = {
+        data[0] = {
             title: 'nothing',
             artists: 'nobody',
             cover: `https://via.placeholder.com/600/000000/FFFFFF/?text=${
                 list[Math.random() * list.length | 0]}!`
         };
-        data.is_playing = await isPlaying();
+        data[0].is_playing = await isPlaying();
     }
     const embed = new MessageEmbed()
         .setTitle(`Now Playing:`)
-        .setDescription(`\`\`\`${data.title} by ${data.artists}\`\`\``)
-        .setThumbnail(data.cover)
+        .setDescription(`\`\`\`${data[0].title} by ${data[0].artists}\`\`\``)
+        .setThumbnail(data[0].cover)
         .setAuthor(context)
-        .setURL(data.track?.url || '')
+        .setURL(data[0].track?.url || '')
         .addField("**Listening:**", `\`\`\`${users}\`\`\``)
     const partyRow = new MessageActionRow()
         .addComponents(
@@ -304,6 +298,7 @@ async function remoteMessage (userData) {
             .setCustomId('refresh')
             .setLabel('🧍')
             .setStyle('SECONDARY'),
+            /*
             new MessageButton()
             .setCustomId('playlist')
             .setLabel('➕')
@@ -314,6 +309,7 @@ async function remoteMessage (userData) {
             .setLabel('💾')
             .setStyle('SECONDARY')
             .setDisabled(true)
+            */
         );
     const playbackRow = new MessageActionRow()
         .addComponents(
@@ -323,8 +319,8 @@ async function remoteMessage (userData) {
             .setStyle('SECONDARY'),
             new MessageButton()
             .setCustomId('play')
-            .setLabel(data.is_playing ? "⏸️" : "▶️")
-            .setStyle(data.is_playing ? 'SUCCESS' : 'SECONDARY'),
+            .setLabel(data[0].is_playing ? "⏸️" : "▶️")
+            .setStyle(data[0].is_playing ? 'SUCCESS' : 'SECONDARY'),
             new MessageButton()
             .setCustomId('next')
             .setLabel("⏭️")
@@ -338,56 +334,47 @@ async function remoteMessage (userData) {
 }
 
 async function syncPlayback(interaction, data) {
+    console.log(">>>syncPlayback()");
     try {
         if (!data)
             throw "data object is null";
-        const leader = data.data;
+        const leader = data.users[0];
         const users = data.users;
         const spotifyApi = new SpotifyWebApi();
-        const margin = 10000;
-        let hasChanged = false;
+        const db = new StormDB(Engine);
+        const margin = db.get('options.margin') || 10000;
 
         for (user of users) {
             try {
-                if (user.id == leader.id)
+                if (user.userId == leader.userId)
                     continue;
+                console.log(user.name, user.userId);
                 const token = await getToken(userId);
                 await spotifyApi.setAccessToken(token);
-                if (user.is_playing != leader.is_playing) {
-                    console.log(user.userId, "is out of sync (playback state)");
-                    let response;
-                    if (user.is_playing)
-                        response = await spotifyApi.pause();
-                    else {
-                        response = await spotifyApi.play({
-                            uris: [leader.track.uri],
-                            context_uri: leader.context.uri
-                        });
+                let unsynced = user.is_playing != leader.is_playing;
+                unsynced ||= (user.track.id == leader.track.id
+                    && Math.abs(user.progress - leader.progress) > margin);
+                unsynced ||= (user.track.id != leader.track.id)
+                    && (user.duration - user.progress) > margin;
+                if (unsynced) {
+                    console.log(user.userId, user.name, "UNSYNCED")
+                    const options = { uris: [leader.track.uri] };
+                    try {
+                        validateResponse(await spotifyApi.play(options));
+                    } catch (error) {
+                        console.log("in syncPlayback().loop.play()", error.status);
+                    }
+                    try {
                         validateResponse(await spotifyApi.seek(leader.progress));
+                    } catch (error) {
+                        console.log("in syncPlayback().loop.seek()", error.status);
                     }
-                    validateResponse(response);
-                    hasChanged = true;
-                } else if (user.track.id == leader.track.id
-                    && Math.abs(user.progress - leader.progress) > margin) {
-                    console.log(user.userId, "is out of sync (track progress)");
-                    const response = await spotify.seek(leader.progress);
-                    validateResponse(response);
-                    hasChanged = true;
-                } else if (user.track.id != leader.track.id
-                    && user.duration - user.progress > margin) {
-                    console.log(user.userId, "is out of sync (wrong track)");
-                    let response = await spotifyApi.play({
-                        uris: [leader.track.uri],
-                        context_uri: leader.context.uri
-                    });
-                    validateResponse(response);
-                    if (!leader.is_playing) {
-                        response = await spotifyApi.pause();
-                        validateResponse(response);
+                    try {
+                        if (!leader.is_playing)
+                            validateResponse(await spotifyApi.pause());
+                    } catch (error) {
+                        console.log("in syncPlayback().loop.pause()", error.status);
                     }
-                    response = await spotify.seek(leader.progress);
-                    validateResponse(response);
-                    hasChanged = true;
                 }
             } catch (error) {
                 console.log('In syncPlayback().loop:', error, 'user:', userId);
@@ -396,56 +383,60 @@ async function syncPlayback(interaction, data) {
     } catch (error) {
         console.log('In syncPlayback():', error);
     }
-    return hasChanged;
 }
 
 async function updateRemote (interaction, data) {
     const db = new StormDB(Engine);
     const options = db.get('options').value();
-    console.log(options);
 
     try {
+        let message;
         //checking API call interval
         if (!getLeaderId()) {
             if (interaction.client.intervalId)
-              clearInterval(interaction.client.intervalId)
+                clearInterval(interaction.client.intervalId)
             interaction.client.updateOnInterval = false;
         }
 
         interaction.client.lastMessage ??= interaction.message;
         console.log('creating message...');
         data ??= await getUserData(interaction);
-        //const hasChanged = await syncPlayback(interaction, data);
-        //interval to "smoothly" update progress between API calls
-        const progressrate = db.get('options.progressrate').value() || 1000;
-        if (getLeaderId() && data.data && !interaction.client.progressId && data.data.is_playing &&
-            db.get('options.updaterate').value() > progressrate) {
-            console.log('setting progress interval');
-            interaction.client.progressId =
-                setInterval(updateProgress, progressrate, interaction, data);
-        } else if (getLeaderId() && !arguments[1]) {
-            console.log('updating progress interval');
-            clearInterval(interaction.client.progressId);
-            interaction.client.progressId =
-                setInterval(updateProgress, progressrate, interaction, data);
-        }
-        //timeout to update on estimated track end
-        try {
-        if (!data.data) throw "data object is null"
-        const delay = data.data.duration - data.data.progress + 3000;
-        if (!interaction.client.timeoutId || interaction.client.timeoutDelay > delay) {
-            console.log(`setting song duration timeout of ${dayjs.duration(delay).format('m:ss')}`);
-            interaction.client.timeoutDelay = delay;
-            if (interaction.client.timeoutId)
-                clearTimeout(interaction.client.timeoutId);
-            interaction.client.timeoutId =
-                setTimeout(onTrackChange, delay, interaction);
-        }
-        } catch (error) {
-            console.log('in updateRemote()(timeout)', error);
-        }
-        const message = await remoteMessage(data);
-        console.log('message has been created!');
+        if (data || !getLeaderId()) {
+            if (data.length > 1) {
+                await syncPlayback(interaction, data);
+            }
+            //interval to "smoothly" update progress between API calls
+            const progressrate = db.get('options.progressrate').value() || 1000;
+            if (getLeaderId() && data[0] && !interaction.client.progressId && data[0].is_playing &&
+                db.get('options.updaterate').value() > progressrate) {
+                console.log('setting progress interval');
+                interaction.client.progressId =
+                    setInterval(updateProgress, progressrate, interaction, data);
+            } else if (getLeaderId() && !arguments[1]) {
+                console.log('updating progress interval');
+                clearInterval(interaction.client.progressId);
+                interaction.client.progressId =
+                    setInterval(updateProgress, progressrate, interaction, data);
+            }
+            //timeout to update on estimated track end
+            try {
+                if (!data[0]) throw "data object is null"
+                const delay = data[0].duration - data[0].progress + 3000;
+                if (!interaction.client.timeoutId || interaction.client.timeoutDelay > delay) {
+                    console.log(`setting song duration timeout of ${dayjs.duration(delay).format('m:ss')}`);
+                    interaction.client.timeoutDelay = delay;
+                    if (interaction.client.timeoutId)
+                        clearTimeout(interaction.client.timeoutId);
+                    interaction.client.timeoutId =
+                        setTimeout(onTrackChange, delay, interaction);
+                }
+            } catch (error) {
+                console.log('in updateRemote()(timeout)', error);
+            }
+            message = await remoteMessage(data);
+            console.log('message has been created!');
+        } else console.log('USING PREVIOUS MESSAGE!!');
+        message ??= interaction.client.oldMessage;
         let followup = false;
         if (options.followup) {
             followup = true;
@@ -468,8 +459,12 @@ async function updateRemote (interaction, data) {
             interaction.client.lastMessage.edit(blank);
             interaction.client.lastMessage = await interaction.followUp(message);
         } else {
-            console.log("edititing reply...");
-            await interaction.client.lastMessage.edit(message);
+            if (JSON.stringify(interaction.client.oldMessage) != JSON.stringify(message)) {
+                console.log("edititing reply...");
+                await interaction.client.lastMessage.edit(message);
+            } else
+                console.log("skipping message update, identical");
+            interaction.client.oldMessage = message;
         }
         console.log('message updated!');
     } catch (error) {
@@ -517,7 +512,7 @@ function addListener (interaction) {
 
 function removeListener (userId) {
     const db = new StormDB(Engine);
-    console.log('Removing listener ' + userId);
+    console.log('Removing listener ', userId);
     const userIds = db.get('listening').value();
     if (!userIds) return;
     const newListeners = userIds.filter(user => user != userId);

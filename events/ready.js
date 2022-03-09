@@ -15,6 +15,7 @@ module.exports = {
 				'threshold': 6,
 				'updaterate': 5000,
 				'progressrate': 1000,
+				'margin': 10000,
 			}
 		}).save();
 		db.get('listening').set([]).save();

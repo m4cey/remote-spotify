@@ -13,7 +13,7 @@ module.exports = {
 			.addNumberOption(option =>
 				option
 				.setName('rate')
-				.setDescription('rate in seconds, eg: 1, 2.5, etc')
+				.setDescription('in seconds, eg: 1, 2.5, etc')
 				.setRequired(true)))
 		.addSubcommand(subcommand =>
 			subcommand.setName('followup')
@@ -28,7 +28,7 @@ module.exports = {
 			.setDescription('The amount of messages before sending a follow up')
 			.addIntegerOption(option =>
 				option
-				.setName('threshold')
+				.setName('time')
 				.setDescription('a whole number bigger than 0')
 				.setRequired(true)))
 		.addSubcommand(subcommand =>
@@ -36,8 +36,16 @@ module.exports = {
 			.setDescription('the progress update rate')
 			.addNumberOption(option =>
 				option
-				.setName('rate')
-				.setDescription('rate in seconds, eg: 1, 2.5, etc')
+				.setName('time')
+				.setDescription('in seconds, eg: 1, 2.5, etc')
+				.setRequired(true)))
+		.addSubcommand(subcommand =>
+			subcommand.setName('margin')
+			.setDescription('the margin of error while syncing')
+			.addNumberOption(option =>
+				option
+				.setName('time')
+				.setDescription('in seconds, eg: 1, 2.5, etc')
 				.setRequired(true))),
 
 	async execute(interaction) {
@@ -48,7 +56,8 @@ module.exports = {
 		switch (option) {
 			case 'updaterate':
 			case 'progressrate':
-				value = 1000 * interaction.options.getNumber('rate');
+			case 'margin':
+				value = 1000 * interaction.options.getNumber('time');
 				break;
 			case 'followup':
 				value = interaction.options.getBoolean('enabled');
