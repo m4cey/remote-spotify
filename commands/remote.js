@@ -15,10 +15,15 @@ module.exports = {
 			console.log(`interaction ${interaction.id} beggining deferral`);
 			await interaction.deferReply();
 			console.log(`interaction ${interaction.id} has been deferred`);
-			//const users = await methods.getUserList(interaction);
 			const data = await methods.getUserData(interaction);
 			const message = await methods.remoteMessage(data);
-			await interaction.editReply(message);
+			if (interaction.client.lastMessage) {
+					const blank = { embeds: [{
+							description: '***Remote was here***'
+					}], components: [] };
+					interaction.client.lastMessage.edit(blank);
+			}
+      interaction.client.lastMessage = await interaction.editReply(message);
 		} catch (error) {
 			console.log(error);
 			const embed = new MessageEmbed()

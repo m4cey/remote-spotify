@@ -42,7 +42,7 @@ buttons.joinButton = async (interaction) => {
 
 buttons.leaveButton = (interaction) => {
 	methods.removeListener(interaction.user.id);
-	if (!methods.getLeaderId && interaction.client.intervalId) {
+	if (!methods.getLeaderId() && interaction.client.intervalId) {
 		clearInterval(interaction.client.intervalId);
 		interaction.client.intervalId = 0;
 		interaction.client.updateOnInterval = false;
@@ -109,6 +109,7 @@ buttons.likeButton = async (interaction) => {
 }
 
 buttons.refreshButton = async (interaction) => {
+	//TODO reset timers and cancel update queue somehow?
 	await wait(1000);
 }
 

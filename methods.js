@@ -125,13 +125,43 @@ async function getPlayingTrack (userId) {
             const res = {
                 artists: data.body.item.artists.map(obj => obj.name).toString(),
                 title: data.body.item.name,
-                cover: data.body.item.album.images[0].url || '',
-                id: data.body.item.id,
+                cover: data.body.item.album.images[0].url,
+                track: {
+                    id: data.body.item.id,
+                    uri: data.body.item.uri,
+                    url: `https://open.spotify.com/track/${data.body.item.id}`
+                },
                 duration: data.body.item.duration_ms,
                 progress: data.body.progress_ms,
-                //context: { type: data.body.context.type, uri: data.body.context.uri },
+                context: { type: data.body.context?.type, uri: data.body.context?.uri },
                 is_playing: data.body.is_playing,
+                userId: userId,
+                album: {
+                    name: data.body.item.album?.name,
+                    type: data.body.item.album?.album_type,
+                    id: data.body.item.album?.id,
+                    url: data.body.item.album?.external_urls.spotify,
+                    cover: data.body.item.album?.images[1].url,
+                },
+                artist: {
+                    name: data.body.item.artists?.[0].name,
+                    url: data.body.item.artists?.[0].external_urls.spotify,
+                    cover: data.body.item.artists?.[0].images?.[0].url,
+                }
             };
+            if (res.context.type == 'playlist') {
+                const id = res.context.uri.split(':')[2];
+                const fields = 'collaborative,images,name,public,external_urls';
+                const data = await spotifyApi.getPlaylist(id, {fields: fields});
+                validateResponse(data);
+                res.playlist = {
+                    collaborative: data.body.collaborative,
+                    public: data.body.public,
+                    name: data.body.name,
+                    cover: data.body.images[0].url,
+                    url: data.body.external_urls.spotify
+                }
+            }
             console.log(res);
             return (res);
         } catch (error) {
@@ -153,7 +183,7 @@ async function trackIsSaved(userId) {
             const track = await getPlayingTrack();
             if (!track)
                 throw "track object is null";
-            const data = await spotifyApi.containsMySavedTracks([track.id]);
+            const data = await spotifyApi.containsMySavedTracks([track.track.id]);
             validateResponse(data);
             track.is_saved = data.body[0];
             return (track);
@@ -192,17 +222,30 @@ async function getUserData(interaction) {
             suffix = data.is_saved ? '[❤️]' : '';
             suffix += data.is_playing ? '' : '[◼]';
             const name = await getUsername(interaction, userId);
-            users.push({
-                name: name + suffix,
-                duration: data.duration,
-                progress: data.progress,
-                is_playing: data.is_playing
-            });
+            data.name = name + suffix;
+            users.push(data);
         } catch (error) {
             console.log('in getUserData(): ', error);
         }
     }
     return { data: leaderData, users: users };
+}
+
+function getContextData(data) {
+    let context = { name: '' };
+    try {
+        if (!data) throw "data object is null";
+        if (!data.context) throw "data.context is null";
+        const type = data.context.type;
+        context = {
+            name: `${type.replace(/^\w/, c => c.toUpperCase())}: ${data[type].name}`,
+            url: data[type].url,
+            iconUrl: data[type].cover
+        };
+    } catch (error) {
+        console.log('In getContextData():', error);
+    }
+    return context;
 }
 
 function formatNameList(data) {
@@ -226,6 +269,8 @@ async function remoteMessage (userData) {
     const userCount = userData.users.length;
     console.log('LISTENING: ', users, userCount);
     let data = userData.data;
+    const context = getContextData(data);
+    console.log("CONTEXT:", context);
     if (!data) {
         const list = ['HELP!', 'PLEASE', 'GETMEOUTOFHERE', 'JUSTKEEPURCOOKIES',
             'SHEHURTSME', 'IWANTOUT', 'CALLCPS', 'HELPME', 'AAAAAAAAAAAAAAAAAAAAAAAAA'];
@@ -241,6 +286,8 @@ async function remoteMessage (userData) {
         .setTitle(`Now Playing:`)
         .setDescription(`\`\`\`${data.title} by ${data.artists}\`\`\``)
         .setThumbnail(data.cover)
+        .setAuthor(context)
+        .setURL(data.track?.url || '')
         .addField("**Listening:**", `\`\`\`${users}\`\`\``)
     const partyRow = new MessageActionRow()
         .addComponents(
@@ -266,7 +313,7 @@ async function remoteMessage (userData) {
             .setCustomId('save')
             .setLabel('💾')
             .setStyle('SECONDARY')
-            .setDisabled(!userCount)
+            .setDisabled(true)
         );
     const playbackRow = new MessageActionRow()
         .addComponents(
@@ -290,12 +337,62 @@ async function remoteMessage (userData) {
     return { embeds: [embed], components: [playbackRow, partyRow] }
 }
 
-/*
 async function syncPlayback(interaction, data) {
-    //interaction.client.oldData;
+    try {
+        if (!data)
+            throw "data object is null";
+        const leader = data.data;
+        const users = data.users;
+        const spotifyApi = new SpotifyWebApi();
+        const margin = 10000;
 
+        for (user of users) {
+            try {
+                if (user.id == leader.id)
+                    continue;
+                const token = await getToken(userId);
+                await spotifyApi.setAccessToken(token);
+                if (user.is_playing != leader.is_playing) {
+                    console.log(user.userId, "is out of sync (playback state)");
+                    let response;
+                    if (user.is_playing)
+                        response = await spotifyApi.pause();
+                    else {
+                        response = await spotifyApi.play({
+                            uris: [leader.track.uri],
+                            context_uri: leader.context.uri
+                        });
+                        validateResponse(await spotifyApi.seek(leader.progress));
+                    }
+                    validateResponse(response);
+                } else if (user.track.id == leader.track.id
+                    && Math.abs(user.progress - leader.progress) > margin) {
+                    console.log(user.userId, "is out of sync (track progress)");
+                    const response = await spotify.seek(leader.progress);
+                    validateResponse(response);
+                } else if (user.track.id != leader.track.id
+                    && user.duration - user.progress > margin) {
+                    console.log(user.userId, "is out of sync (wrong track)");
+                    let response = await spotifyApi.play({
+                        uris: [leader.track.uri],
+                        context_uri: leader.context.uri
+                    });
+                    validateResponse(response);
+                    if (!leader.is_playing) {
+                        response = await spotifyApi.pause();
+                        validateResponse(response);
+                    }
+                    response = await spotify.seek(leader.progress);
+                    validateResponse(response);
+                }
+            } catch (error) {
+                console.log('In syncPlayback().loop:', error, 'user:', userId);
+            }
+        }
+    } catch (error) {
+        console.log('In syncPlayback():', error);
+    }
 }
-*/
 
 async function updateRemote (interaction, data) {
     const db = new StormDB(Engine);
@@ -313,7 +410,8 @@ async function updateRemote (interaction, data) {
         interaction.client.lastMessage ??= interaction.message;
         console.log('creating message...');
         data ??= await getUserData(interaction);
-        //interval to update progress between API calls
+        //const hasChanged = await syncPlayback(interaction, data);
+        //interval to "smoothly" update progress between API calls
         const progressrate = db.get('options.progressrate').value() || 1000;
         if (getLeaderId() && data.data && !interaction.client.progressId && data.data.is_playing &&
             db.get('options.updaterate').value() > progressrate) {
@@ -326,7 +424,7 @@ async function updateRemote (interaction, data) {
             interaction.client.progressId =
                 setInterval(updateProgress, progressrate, interaction, data);
         }
-        //timeout to update on estimated track change
+        //timeout to update on estimated track end
         try {
         if (!data.data) throw "data object is null"
         const delay = data.data.duration - data.data.progress + 3000;
@@ -438,5 +536,6 @@ module.exports = {
     getUserData,
     trackIsSaved,
     getUsername,
-    getPlayingTrack
+    getPlayingTrack,
+    getLeaderId
 };
