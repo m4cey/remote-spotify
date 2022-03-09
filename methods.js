@@ -147,6 +147,9 @@ async function getPlayingTrack (userId) {
                     url: data.body.item.artists?.[0].external_urls.spotify,
                 }
             };
+            const saved = await spotifyApi.containsMySavedTracks([res.track.id]);
+            validateResponse(saved);
+            res.is_saved = saved.body[0];
             if (res.context.type == 'playlist') {
                 const id = res.context.uri.split(':')[2];
                 const fields = 'collaborative,images,name,public,external_urls';
@@ -159,7 +162,6 @@ async function getPlayingTrack (userId) {
                     url: data.body.external_urls.spotify
                 }
             }
-            //console.log(res);
             return (res);
         } catch (error) {
             console.log('in getPlayingTrack(): ', error);
@@ -211,7 +213,7 @@ async function getUserData(interaction) {
     console.log("userIds =", userIds.length);
     for (userId of userIds) {
         try {
-            let data = await trackIsSaved(userId);
+            let data = await getPlayingTrack(userId);
             if (!data)
                 throw "data object is null";
             data.name = await getUsername(interaction, userId);
@@ -333,29 +335,28 @@ async function remoteMessage (data) {
     return { embeds: [embed], components: [playbackRow, partyRow] }
 }
 
-async function syncPlayback(interaction, data) {
+async function syncPlayback(interaction, users) {
     console.log(">>>syncPlayback()");
     try {
-        if (!data)
+        if (!users)
             throw "data object is null";
-        const leader = data.users[0];
-        const users = data.users;
+        const leader = users[0];
         const spotifyApi = new SpotifyWebApi();
         const db = new StormDB(Engine);
         const margin = db.get('options.margin') || 10000;
 
         for (user of users) {
             try {
-                if (user.userId == leader.userId)
+                if (user == leader)
                     continue;
                 console.log(user.name, user.userId);
                 const token = await getToken(userId);
                 await spotifyApi.setAccessToken(token);
                 let unsynced = user.is_playing != leader.is_playing;
-                unsynced ||= (user.track.id == leader.track.id
-                    && Math.abs(user.progress - leader.progress) > margin);
+                unsynced ||= (user.track.id == leader.track.id)
+                    && (Math.abs(user.progress - leader.progress) > margin);
                 unsynced ||= (user.track.id != leader.track.id)
-                    && (user.duration - user.progress) > margin;
+                    && ((user.duration - user.progress) > margin);
                 if (unsynced) {
                     console.log(user.userId, user.name, "UNSYNCED")
                     const options = { uris: [leader.track.uri] };
@@ -365,7 +366,7 @@ async function syncPlayback(interaction, data) {
                         console.log("in syncPlayback().loop.play()", error.status);
                     }
                     try {
-                        validateResponse(await spotifyApi.seek(leader.progress));
+                        validateResponse(await spotifyApi.seek(leader.progress + 2000));
                     } catch (error) {
                         console.log("in syncPlayback().loop.seek()", error.status);
                     }
@@ -474,8 +475,8 @@ async function updateRemote (interaction, data) {
 
 async function updateProgress(interaction, data) {
     try {
-        if (!data.data) throw "data object is null"
-        if (!getLeaderId() || !data.data.is_playing) {
+        if (!data[0]) throw "data object is null"
+        if (!getLeaderId() || !data[0].is_playing) {
             console.log('clearing progress interval');
             clearInterval(interaction.client.progressId);
             interaction.client.progressId = 0;
@@ -483,7 +484,7 @@ async function updateProgress(interaction, data) {
         }
         const db = new StormDB(Engine);
         const progressrate = db.get('options.progressrate').value() || 1000;
-        data.users.forEach( user => user.progress += progressrate);
+        data.forEach( user => user.progress += progressrate);
         await updateRemote(interaction, data);
     } catch (error) {
         console.error('in updateProgress(): ', error);
