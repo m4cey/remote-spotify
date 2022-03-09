@@ -10,8 +10,20 @@ const duration = require('dayjs/plugin/duration');
 dayjs().format();
 dayjs.extend(duration);
 
-function apiError() {
-    console.log('Something went wrong!');
+function apiError(message, status) {
+    this.message = message;
+    this.status = status;
+}
+function validateResponse(data) {
+    if (!data)
+        throw new apiError("Can't connect to spotify API", 503);
+    if (data.statusCode == 204)
+        throw new apiError("User device is inactive", 204);
+    if (data.body.error)
+        throw new apiError(
+            data.body.error.message,
+            data.body.error.status
+        );
 }
 
 function postGuide (interaction) {
@@ -87,11 +99,13 @@ async function isPlaying () {
             const token = await getToken(leaderId);
             spotifyApi.setAccessToken(token);
             const data = await spotifyApi.getMyCurrentPlaybackState();
-            if (!data)
-                throw "Can't connect to Spotify API"
+            validateResponse(data);
             return (data.body.is_playing);
         } catch (error) {
-            console.log(error);
+            console.log("In isPlaying:", error);
+            if (error.status == 204) {
+                removeListener(leaderId);
+            }
             return (false);
         }
     }
@@ -107,13 +121,7 @@ async function getPlayingTrack (userId) {
             const token = await getToken(userId);
             spotifyApi.setAccessToken(token);
             const data = await spotifyApi.getMyCurrentPlaybackState();
-            //console.log(userId, data);
-            if (data.headers.statusCode == 204) {
-                removeListener(userId);
-                throw "User device inactive";
-            }
-            if (!data.body || !data.body.item)
-                throw "Can't connect to Spotify API";
+            validateResponse(data);
             const res = {
                 artists: data.body.item.artists.map(obj => obj.name).toString(),
                 title: data.body.item.name,
@@ -123,12 +131,14 @@ async function getPlayingTrack (userId) {
                 progress: data.body.progress_ms,
                 //context: { type: data.body.context.type, uri: data.body.context.uri },
                 is_playing: data.body.is_playing,
-                is_active: data.headers.statusCode != 204
             };
             console.log(res);
             return (res);
         } catch (error) {
             console.log('in getPlayingTrack(): ', error);
+            if (error.status == 204) {
+                removeListener(userId);
+            }
         }
     }
 }
@@ -142,14 +152,16 @@ async function trackIsSaved(userId) {
             spotifyApi.setAccessToken(token);
             const track = await getPlayingTrack();
             if (!track)
-                throw "Can't connect to Spotify API (1)"
+                throw "track object is null";
             const data = await spotifyApi.containsMySavedTracks([track.id]);
-            if (!data)
-                throw "Can't connect to Spotify API (2)"
+            validateResponse(data);
             track.is_saved = data.body[0];
             return (track);
         } catch (error) {
             console.log("In trackIsSaved():", error);
+            if (error.status == 204) {
+                removeListener(userId);
+            }
         }
     }
 }
@@ -173,12 +185,8 @@ async function getUserData(interaction) {
         try {
             let suffix = '';
             const data = await trackIsSaved(userId);
-            if (!data.is_active) {
-                removeListener(userId);
-                throw "User device inactive"
-            }
             if (!data)
-                throw "Can't connect to Spotify API"
+                throw "data object is null";
             if (userId == userIds[0])
                 leaderData = data;
             suffix = data.is_saved ? '[❤️]' : '';
@@ -198,7 +206,9 @@ async function getUserData(interaction) {
 }
 
 function formatNameList(data) {
-    if (!data) return;
+    console.log("formatNameList()");
+    if (!data || !data.length)
+        return 'no users listening';
     let users = '';
     for (user of data) {
         if (user.duration) {
@@ -212,9 +222,9 @@ function formatNameList(data) {
 }
 
 async function remoteMessage (userData) {
-    if (!userData) return;
     const users = formatNameList(userData.users);
-    console.log('LISTENING: ', users);
+    const userCount = userData.users.length;
+    console.log('LISTENING: ', users, userCount);
     let data = userData.data;
     if (!data) {
         const list = ['HELP!', 'PLEASE', 'GETMEOUTOFHERE', 'JUSTKEEPURCOOKIES',
@@ -231,7 +241,7 @@ async function remoteMessage (userData) {
         .setTitle(`Now Playing:`)
         .setDescription(`\`\`\`${data.title} by ${data.artists}\`\`\``)
         .setThumbnail(data.cover)
-        .addField("**Listening:**", `\`\`\`${users || "no users listening"}\`\`\``)
+        .addField("**Listening:**", `\`\`\`${users}\`\`\``)
     const partyRow = new MessageActionRow()
         .addComponents(
             new MessageButton()
@@ -242,7 +252,7 @@ async function remoteMessage (userData) {
             .setCustomId('leave')
             .setLabel('🙅')
             .setStyle('DANGER')
-            .setDisabled(!users),
+            .setDisabled(!userCount),
             new MessageButton()
             .setCustomId('refresh')
             .setLabel('🧍')
@@ -251,12 +261,12 @@ async function remoteMessage (userData) {
             .setCustomId('playlist')
             .setLabel('➕')
             .setStyle('SECONDARY')
-            .setDisabled(!users),
+            .setDisabled(!userCount),
             new MessageButton()
             .setCustomId('save')
             .setLabel('💾')
             .setStyle('SECONDARY')
-            .setDisabled(!users)
+            .setDisabled(!userCount)
         );
     const playbackRow = new MessageActionRow()
         .addComponents(
@@ -293,11 +303,17 @@ async function updateRemote (interaction, data) {
     console.log(options);
 
     try {
-        interaction.client.lastMessage ??= interaction.message;
+        //checking API call interval
+        if (!getLeaderId()) {
+            if (interaction.client.intervalId)
+              clearInterval(interaction.client.intervalId)
+            interaction.client.updateOnInterval = false;
+        }
 
+        interaction.client.lastMessage ??= interaction.message;
         console.log('creating message...');
         data ??= await getUserData(interaction);
-        //if (!data || !data.data) throw "data object is null"
+        //interval to update progress between API calls
         const progressrate = db.get('options.progressrate').value() || 1000;
         if (getLeaderId() && data.data && !interaction.client.progressId && data.data.is_playing &&
             db.get('options.updaterate').value() > progressrate) {
@@ -396,15 +412,14 @@ function addListener (interaction) {
     console.log(db.get('listening').value());
 }
 
-function removeListener (interaction) {
+function removeListener (userId) {
     const db = new StormDB(Engine);
-    console.log('Removing listener ' + interaction.user.tag);
+    console.log('Removing listener ' + userId);
     const userIds = db.get('listening').value();
     if (!userIds) return;
-    const newListeners = userIds.filter(user => user != interaction.user.id);
+    const newListeners = userIds.filter(user => user != userId);
     db.get('listening').set(newListeners).save();
     console.log(db.get('listening').value());
-    await updateRemote(interaction);
 }
 
 module.exports = {
@@ -417,6 +432,7 @@ module.exports = {
     execute,
     getToken,
     apiError,
+    validateResponse,
     isPlaying,
     remoteMessage,
     getUserData,

@@ -24,19 +24,16 @@ buttons.joinButton = async (interaction) => {
 			const spotifyApi = new SpotifyWebApi();
 			await spotifyApi.setAccessToken(token);
 			const data = await spotifyApi.getMyCurrentPlaybackState();
-			if (!data) {
-				throw "Can't connect to Spotify API"
-			}
-			if (data.headers.statusCode == 204) {
-				const message = { embeds: [{ title: "Device is inactive",
-					description: "Make sure your spotify app is open and play a track to make it active!" }], ephemeral: true };
-				interaction.followUp(message);
-				throw "Playback device is inactive"
-			}
+			methods.validateResponse(data);
 			methods.addListener(interaction);
 			interaction.client.updateOnInterval = true;
 		} catch (error) {
-			console.log('in JoinButton(): ', error);
+			console.log('in JoinButton():', error);
+			if (error.status == 204) {
+				const message = { embeds: [{ title: "Device is inactive",
+					description: "Make sure your spotify app is open and play a track to make it active!" }], ephemeral: true };
+				interaction.followUp(message);
+			}
 		}
 	}
 	else
