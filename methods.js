@@ -345,6 +345,7 @@ async function syncPlayback(interaction, data) {
         const users = data.users;
         const spotifyApi = new SpotifyWebApi();
         const margin = 10000;
+        let hasChanged = false;
 
         for (user of users) {
             try {
@@ -365,11 +366,13 @@ async function syncPlayback(interaction, data) {
                         validateResponse(await spotifyApi.seek(leader.progress));
                     }
                     validateResponse(response);
+                    hasChanged = true;
                 } else if (user.track.id == leader.track.id
                     && Math.abs(user.progress - leader.progress) > margin) {
                     console.log(user.userId, "is out of sync (track progress)");
                     const response = await spotify.seek(leader.progress);
                     validateResponse(response);
+                    hasChanged = true;
                 } else if (user.track.id != leader.track.id
                     && user.duration - user.progress > margin) {
                     console.log(user.userId, "is out of sync (wrong track)");
@@ -384,6 +387,7 @@ async function syncPlayback(interaction, data) {
                     }
                     response = await spotify.seek(leader.progress);
                     validateResponse(response);
+                    hasChanged = true;
                 }
             } catch (error) {
                 console.log('In syncPlayback().loop:', error, 'user:', userId);
@@ -392,6 +396,7 @@ async function syncPlayback(interaction, data) {
     } catch (error) {
         console.log('In syncPlayback():', error);
     }
+    return hasChanged;
 }
 
 async function updateRemote (interaction, data) {
