@@ -108,12 +108,12 @@ async function getPlayingTrack (userId) {
             spotifyApi.setAccessToken(token);
             const data = await spotifyApi.getMyCurrentPlaybackState();
             //console.log(userId, data);
-            if (!data.body || !data.body.item)
-                throw "Can't connect to Spotify API";
             if (data.headers.statusCode == 204) {
                 removeListener(userId);
                 throw "User device inactive";
             }
+            if (!data.body || !data.body.item)
+                throw "Can't connect to Spotify API";
             const res = {
                 artists: data.body.item.artists.map(obj => obj.name).toString(),
                 title: data.body.item.name,
@@ -173,12 +173,12 @@ async function getUserData(interaction) {
         try {
             let suffix = '';
             const data = await trackIsSaved(userId);
-            if (!data)
-                throw "Can't connect to Spotify API"
             if (!data.is_active) {
                 removeListener(userId);
                 throw "User device inactive"
             }
+            if (!data)
+                throw "Can't connect to Spotify API"
             if (userId == userIds[0])
                 leaderData = data;
             suffix = data.is_saved ? '[❤️]' : '';
@@ -404,6 +404,7 @@ function removeListener (interaction) {
     const newListeners = userIds.filter(user => user != interaction.user.id);
     db.get('listening').set(newListeners).save();
     console.log(db.get('listening').value());
+    await updateRemote(interaction);
 }
 
 module.exports = {
