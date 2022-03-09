@@ -41,7 +41,7 @@ buttons.joinButton = async (interaction) => {
 }
 
 buttons.leaveButton = (interaction) => {
-	methods.removeListener(interaction);
+	methods.removeListener(interaction.user.id);
 	if (!methods.getLeaderId && interaction.client.intervalId) {
 		clearInterval(interaction.client.intervalId);
 		interaction.client.intervalId = 0;
