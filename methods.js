@@ -107,8 +107,13 @@ async function getPlayingTrack (userId) {
             const token = await getToken(userId);
             spotifyApi.setAccessToken(token);
             const data = await spotifyApi.getMyCurrentPlaybackState();
+            //console.log(userId, data);
             if (!data.body || !data.body.item)
                 throw "Can't connect to Spotify API";
+            if (data.headers.statusCode == 204) {
+                removeListener(userId);
+                throw "User device inactive";
+            }
             const res = {
                 artists: data.body.item.artists.map(obj => obj.name).toString(),
                 title: data.body.item.name,
@@ -118,7 +123,7 @@ async function getPlayingTrack (userId) {
                 progress: data.body.progress_ms,
                 //context: { type: data.body.context.type, uri: data.body.context.uri },
                 is_playing: data.body.is_playing,
-                is_active: data.body.device.is_active
+                is_active: data.headers.statusCode != 204
             };
             console.log(res);
             return (res);
@@ -170,11 +175,14 @@ async function getUserData(interaction) {
             const data = await trackIsSaved(userId);
             if (!data)
                 throw "Can't connect to Spotify API"
+            if (!data.is_active) {
+                removeListener(userId);
+                throw "User device inactive"
+            }
             if (userId == userIds[0])
                 leaderData = data;
             suffix = data.is_saved ? '[❤️]' : '';
             suffix += data.is_playing ? '' : '[◼]';
-            suffix += data.is_active ? '' : '[inactive]';
             const name = await getUsername(interaction, userId);
             users.push({
                 name: name + suffix,
@@ -184,7 +192,6 @@ async function getUserData(interaction) {
             });
         } catch (error) {
             console.log('in getUserData(): ', error);
-            users.push({ name: '>a dumbass[offline]' });
         }
     }
     return { data: leaderData, users: users };
@@ -197,7 +204,7 @@ function formatNameList(data) {
         if (user.duration) {
             const progress = dayjs.duration(user.progress).format('m:ss');
             const duration = dayjs.duration(user.duration).format('m:ss');
-            users  += `${user.name}[${progress}/${duration}]\n`;
+            users  += `>${user.name}[${progress}/${duration}]\n`;
         } else
             users += `${user.name}\n`;
     }
@@ -227,35 +234,45 @@ async function remoteMessage (userData) {
         .addField("**Listening:**", `\`\`\`${users || "no users listening"}\`\`\``)
     const partyRow = new MessageActionRow()
         .addComponents(
-        new MessageButton()
+            new MessageButton()
             .setCustomId('join')
             .setLabel('🙋')
             .setStyle('PRIMARY'),
-        new MessageButton()
+            new MessageButton()
             .setCustomId('leave')
             .setLabel('🙅')
             .setStyle('DANGER')
             .setDisabled(!users),
-        new MessageButton()
+            new MessageButton()
             .setCustomId('refresh')
             .setLabel('🧍')
+            .setStyle('SECONDARY'),
+            new MessageButton()
+            .setCustomId('playlist')
+            .setLabel('➕')
             .setStyle('SECONDARY')
+            .setDisabled(!users),
+            new MessageButton()
+            .setCustomId('save')
+            .setLabel('💾')
+            .setStyle('SECONDARY')
+            .setDisabled(!users)
         );
     const playbackRow = new MessageActionRow()
         .addComponents(
-        new MessageButton()
+            new MessageButton()
             .setCustomId('previous')
             .setLabel("⏮️")
             .setStyle('SECONDARY'),
-        new MessageButton()
+            new MessageButton()
             .setCustomId('play')
             .setLabel(data.is_playing ? "⏸️" : "▶️")
             .setStyle(data.is_playing ? 'SUCCESS' : 'SECONDARY'),
-        new MessageButton()
+            new MessageButton()
             .setCustomId('next')
             .setLabel("⏭️")
             .setStyle('SECONDARY'),
-        new MessageButton()
+            new MessageButton()
             .setCustomId('like')
             .setLabel("❤️")
             .setStyle('SECONDARY'),
@@ -263,78 +280,100 @@ async function remoteMessage (userData) {
     return { embeds: [embed], components: [playbackRow, partyRow] }
 }
 
+/*
+async function syncPlayback(interaction, data) {
+    //interaction.client.oldData;
+
+}
+*/
+
 async function updateRemote (interaction, data) {
     const db = new StormDB(Engine);
     const options = db.get('options').value();
     console.log(options);
 
-    interaction.client.lastMessage ??= interaction.message;
+    try {
+        interaction.client.lastMessage ??= interaction.message;
 
-    console.log('creating message...');
-    data ??= await getUserData(interaction);
-    const progressrate = db.get('options.progressrate').value() || 1000;
-    if (data.data && !interaction.client.progressId && data.data.is_playing &&
-        db.get('options.updaterate').value() > progressrate) {
-        console.log('setting progress interval');
-        interaction.client.progressId =
-            setInterval(updateProgress, progressrate, interaction, data);
-    } else if (!arguments[1] && data.data.is_playing) {
-        console.log('updating progress interval');
-        clearInterval(interaction.client.progressId);
-        interaction.client.progressId =
-            setInterval(updateProgress, progressrate, interaction, data);
-    }
-    //timeout to update on estimated track change
-    const delay = data.data.duration - data.data.progress + 3000;
-    if (!interaction.client.timeoutId || interaction.client.timeoutDelay > delay) {
-        console.log(`setting song duration timeout of ${dayjs.duration(delay).format('m:ss')}`);
-        interaction.client.timeoutDelay = delay;
-        if (interaction.client.timeoutId)
-            clearTimeout(interaction.client.timeoutId);
-        interaction.client.timeoutId =
-            setTimeout(onTrackChange, delay, interaction);
-    }
-    const message = await remoteMessage(data);
-    console.log('message has been created!');
-    let followup = false;
-    if (options.followup) {
-        followup = true;
-        const collection = interaction.channel.messages.cache;
-        let threshold = options.threshold;
-        for (let i = -1; Math.abs(i) <= threshold; i-- ) {
-            const message = collection.get(collection.keyAt(i));
-            if (message.applicationId == interaction.message.applicationId) {
-                followup = false;
-                break;
+        console.log('creating message...');
+        data ??= await getUserData(interaction);
+        //if (!data || !data.data) throw "data object is null"
+        const progressrate = db.get('options.progressrate').value() || 1000;
+        if (getLeaderId() && data.data && !interaction.client.progressId && data.data.is_playing &&
+            db.get('options.updaterate').value() > progressrate) {
+            console.log('setting progress interval');
+            interaction.client.progressId =
+                setInterval(updateProgress, progressrate, interaction, data);
+        } else if (getLeaderId() && !arguments[1]) {
+            console.log('updating progress interval');
+            clearInterval(interaction.client.progressId);
+            interaction.client.progressId =
+                setInterval(updateProgress, progressrate, interaction, data);
+        }
+        //timeout to update on estimated track change
+        try {
+        if (!data.data) throw "data object is null"
+        const delay = data.data.duration - data.data.progress + 3000;
+        if (!interaction.client.timeoutId || interaction.client.timeoutDelay > delay) {
+            console.log(`setting song duration timeout of ${dayjs.duration(delay).format('m:ss')}`);
+            interaction.client.timeoutDelay = delay;
+            if (interaction.client.timeoutId)
+                clearTimeout(interaction.client.timeoutId);
+            interaction.client.timeoutId =
+                setTimeout(onTrackChange, delay, interaction);
+        }
+        } catch (error) {
+            console.log('in updateRemote()(timeout)', error);
+        }
+        const message = await remoteMessage(data);
+        console.log('message has been created!');
+        let followup = false;
+        if (options.followup) {
+            followup = true;
+            const collection = interaction.channel.messages.cache;
+            let threshold = options.threshold;
+            for (let i = -1; Math.abs(i) <= threshold; i-- ) {
+                const message = collection.get(collection.keyAt(i));
+                if (message.applicationId == interaction.message.applicationId) {
+                    followup = false;
+                    break;
+                }
             }
         }
+        if (followup) {
+            console.log("following up reply...");
+            const blank = { embeds: [{
+                description: '***Remote was here***'
+            }], components: [] };
+            interaction.editReply(blank);
+            interaction.client.lastMessage.edit(blank);
+            interaction.client.lastMessage = await interaction.followUp(message);
+        } else {
+            console.log("edititing reply...");
+            await interaction.client.lastMessage.edit(message);
+        }
+        console.log('message updated!');
+    } catch (error) {
+        console.error('In updateRemote(): ', error);
     }
-    if (followup) {
-        console.log("following up reply...");
-        const blank = { embeds: [{
-            description: '***Remote was here***'
-        }], components: [] };
-        interaction.editReply(blank);
-        interaction.client.lastMessage.edit(blank);
-        interaction.client.lastMessage = await interaction.followUp(message);
-    } else {
-        console.log("edititing reply...");
-        await interaction.client.lastMessage.edit(message);
-    }
-    console.log('message updated!');
 }
 
 async function updateProgress(interaction, data) {
-    if (!getLeaderId() || !(data.users.filter(user => user.is_playing).length)) {
-        console.log('clearing progress interval');
-        clearInterval(interaction.client.progressId);
-        interaction.client.progressId = 0;
-        return;
+    try {
+        if (!data.data) throw "data object is null"
+        if (!getLeaderId() || !data.data.is_playing) {
+            console.log('clearing progress interval');
+            clearInterval(interaction.client.progressId);
+            interaction.client.progressId = 0;
+            return;
+        }
+        const db = new StormDB(Engine);
+        const progressrate = db.get('options.progressrate').value() || 1000;
+        data.users.forEach( user => user.progress += progressrate);
+        await updateRemote(interaction, data);
+    } catch (error) {
+        console.error('in updateProgress(): ', error);
     }
-    const db = new StormDB(Engine);
-    const progressrate = db.get('options.progressrate').value() || 1000;
-    data.users.forEach( user => user.progress += progressrate);
-    await updateRemote(interaction, data);
 }
 
 async function onTrackChange (interaction) {
@@ -365,7 +404,6 @@ function removeListener (interaction) {
     const newListeners = userIds.filter(user => user != interaction.user.id);
     db.get('listening').set(newListeners).save();
     console.log(db.get('listening').value());
-    //updateRemote(interaction);
 }
 
 module.exports = {

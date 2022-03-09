@@ -1,4 +1,5 @@
 const wait = require('node:timers/promises').setTimeout;
+const SpotifyWebApi = require('spotify-web-api-node');
 const StormDB = require("stormdb");
 const methods = require('../methods.js');
 const { Engine } = require('../database.js');
@@ -19,12 +20,19 @@ buttons.joinButton = async (interaction) => {
 	if (userIds.includes(userId)) {
 		console.log('USERID: ', userId);
 		try {
-			await methods.execute(userId, async (spotifyApi, token, userId) => {
-				const data = await spotifyApi.getMe();
-				if (!data)
-						throw "Can't connect to Spotify API"
-				console.log('SPOTIFY USER:', data.body.display_name, data.body.email);
-			});
+			const token = await methods.getToken(userId);
+			const spotifyApi = new SpotifyWebApi();
+			await spotifyApi.setAccessToken(token);
+			const data = await spotifyApi.getMyCurrentPlaybackState();
+			if (!data) {
+				throw "Can't connect to Spotify API"
+			}
+			if (data.headers.statusCode == 204) {
+				const message = { embeds: [{ title: "Device is inactive",
+					description: "Make sure your spotify app is open and play a track to make it active!" }], ephemeral: true };
+				interaction.followUp(message);
+				throw "Playback device is inactive"
+			}
 			methods.addListener(interaction);
 			interaction.client.updateOnInterval = true;
 		} catch (error) {
@@ -60,10 +68,10 @@ buttons.playButton = async (interaction) => {
 				await spotifyApi.pause();
 			else
 				await spotifyApi.play();
-			} catch (error) {
-				console.log(error);
-			}
-		});
+		} catch (error) {
+			console.log(error);
+		}
+	});
 }
 
 buttons.previousButton = async (interaction) => {
@@ -121,8 +129,8 @@ module.exports = {
 			console.log(interaction.customId, ':beggining message update');
 			await methods.updateRemote(interaction);
 			if (interaction.client.updateOnInterval) {
-					if (interaction.client.intervalId)
-							clearInterval(interaction.client.intervalId)
+				if (interaction.client.intervalId)
+					clearInterval(interaction.client.intervalId)
 				const delay = db.get('options.updaterate').value() || 5000;
 				console.log(`setting an interval of ${delay} milliseconds`);
 				interaction.client.intervalId =
