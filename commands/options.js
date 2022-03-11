@@ -65,7 +65,7 @@ module.exports = {
 			case 'updaterate':
 			case 'progressrate':
 			case 'margin':
-				value = 1000 * interaction.options.getNumber('time');
+				value = 1000 * interaction.options.getNumber('float');
 				break;
 			case 'followup':
 			case 'sync_context':
