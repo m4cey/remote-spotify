@@ -17,7 +17,8 @@
   "description": "remote control spotify players",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "npm run deploy && node index.js",
+    "deploy": "node deploy-commands.js"
   },
   "repository": {
     "type": "git",
