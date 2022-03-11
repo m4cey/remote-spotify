@@ -1,8 +1,8 @@
 const fs = require('node:fs');
 const { startServer } = require('./server.js');
 const { Client, Collection, Intents, MessageEmbed } = require('discord.js');
-const { token } = require('./config.json');
-//const StormDB = require('stormdb');
+const dotenv = require('dotenv');
+dotenv.config();
 
 // Create a new client instance
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
@@ -28,4 +28,4 @@ for (const file of eventFiles) {
 
 // Login to Discord with your client's token
 startServer();
-client.login(token);
+client.login(process.env.token);

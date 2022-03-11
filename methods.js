@@ -1,5 +1,4 @@
 const axios = require('axios').default;
-const { spotifyClientId, spotifyClientSecret, redirectUri } = require('./config.json');
 const SpotifyWebApi = require('spotify-web-api-node');
 const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
 const StormDB = require("stormdb");
