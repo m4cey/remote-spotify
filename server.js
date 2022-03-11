@@ -1,5 +1,7 @@
 const fastify = require('fastify')({ logger: false });
 const path = require('path');
+const dotenv = require('dotenv');
+dotenv.config();
 
 // Declare a route
 fastify.register(require('fastify-static'), {
@@ -13,7 +15,7 @@ fastify.get('/guide', function (req, reply) {
 
 const startServer = async () => {
   try {
-    await fastify.listen(27056, '0.0.0.0')
+    await fastify.listen(process.env.PORT, '0.0.0.0')
   } catch (err) {
     console.log("fastify error")
     fastify.log.error(err)

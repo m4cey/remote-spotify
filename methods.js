@@ -3,6 +3,8 @@ const SpotifyWebApi = require('spotify-web-api-node');
 const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
 const StormDB = require("stormdb");
 const { Engine } = require('./database.js');
+const dotenv = require('dotenv');
+dotenv.config();
 
 const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
@@ -26,7 +28,7 @@ function validateResponse(data, device_error) {
 }
 
 function postGuide (interaction) {
-    const url = "http://216.27.10.96:27056/guide"
+    const url = `${process.env.domain}:${process.env.PORT}/guide`
     const embed = new MessageEmbed()
         .setTitle('Authentication required')
         .setDescription("visit the link for an easy guide")
