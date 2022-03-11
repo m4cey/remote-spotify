@@ -12,7 +12,7 @@ module.exports = {
 			.setDescription('the content update rate')
 			.addNumberOption(option =>
 				option
-				.setName('time')
+				.setName('float')
 				.setDescription('in seconds, eg: 1, 2.5, etc')
 				.setRequired(true)))
 		.addSubcommand(subcommand =>
@@ -29,22 +29,22 @@ module.exports = {
 			.addBooleanOption(option =>
 				option
 				.setName('enabled')
-				.setDescription('enable or disable synced context')
+				.setDescription('toggle between syncing playlists/albums vs syncing individual tracks')
 				.setRequired(true)))
 		.addSubcommand(subcommand =>
 			subcommand.setName('threshold')
-			.setDescription('The amount of messages before sending a follow up')
+			.setDescription('The number of messages to wait before sending a follow up')
 			.addIntegerOption(option =>
 				option
-				.setName('time')
-				.setDescription('a whole number bigger than 0')
+				.setName('number')
+				.setDescription('a number, not a letter. a NUMBER')
 				.setRequired(true)))
 		.addSubcommand(subcommand =>
 			subcommand.setName('progressrate')
 			.setDescription('the progress update rate')
 			.addNumberOption(option =>
 				option
-				.setName('time')
+				.setName('float')
 				.setDescription('in seconds, eg: 1, 2.5, etc')
 				.setRequired(true)))
 		.addSubcommand(subcommand =>
@@ -52,7 +52,7 @@ module.exports = {
 			.setDescription('the margin of error while syncing')
 			.addNumberOption(option =>
 				option
-				.setName('time')
+				.setName('float')
 				.setDescription('in seconds, eg: 1, 2.5, etc')
 				.setRequired(true))),
 
@@ -72,7 +72,7 @@ module.exports = {
 				value = interaction.options.getBoolean('enabled');
 				break;
 			case 'threshold':
-				value = interaction.options.getInteger('threshold');
+				value = interaction.options.getInteger('number');
 				break;
 			default:
 				embed = { title: 'Nothing was set', description: 'didn\'t want to anyways' }
