@@ -429,7 +429,7 @@ async function syncPlayback(users) {
         //console.log("QUEUE:", leader.queue?.tracks.map(track => track.uri ));
         for (user of users) {
             try {
-                if (user == leader || user.skipping)
+                if (user == leader || user.skipping)//(user.skipping && user.track.id != leader.track.id))
                     continue;
                 console.log('>', leader.name, leader.userId, leader.track.id);
                 console.log(user.name, user.userId, user.track.id);
@@ -451,9 +451,9 @@ async function syncPlayback(users) {
                                 if (unsynced) {
                                     const options = { context_uri: leader.context.uri };
                                     validateResponse(await spotifyApi.play(options));
-                                    user.skipping = true;
+                                    user.skipping = leader.queue.index > 0;
                                     for (let i = 0; i < leader.queue.index; i++) {
-                                        console.log("SKIPPING TRACK:", i, '/', leader.queue.index);
+                                        console.log("SKIPPING TRACK:", i+1, '/', leader.queue.index);
                                         validateResponse(await spotifyApi.skipToNext());
                                     }
                                 }
@@ -566,7 +566,7 @@ async function updateRemote (interaction, data) {
             return {id: user.userId, is_playing: user.is_playing, name: user.name, new: user.new}
         }));
 
-        interaction.client.state ??= data;
+        //interaction.client.state ??= data;
         if (data.length > 1) {
             for (let i = 1; i < data.length; i++) {
                 data[i].skipping = interaction.client.state?.[i]?.skipping || false;
@@ -574,8 +574,7 @@ async function updateRemote (interaction, data) {
             syncPlayback(data);
             for (let i = 1; i < data.length; i++) {
                 console.log("SKIP ON?", data[i].name, data[i].skipping);
-                interaction.client.state = data;
-                interaction.client.state[i].skipping =
+                data[i].skipping =
                     (data[i].track.id == data[0].track.id) ? false : data[i].skipping;
             }
         }
