@@ -9,7 +9,7 @@ fastify.register(require('fastify-static'), {
     prefix: '/'
 });
 
-fastify.get('/guide', function (req, reply) {
+fastify.get('/', function (req, reply) {
     return reply.sendFile('index.html');
 })
 
