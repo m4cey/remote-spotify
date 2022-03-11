@@ -12,7 +12,7 @@ module.exports = {
 			.setDescription('the content update rate')
 			.addNumberOption(option =>
 				option
-				.setName('rate')
+				.setName('time')
 				.setDescription('in seconds, eg: 1, 2.5, etc')
 				.setRequired(true)))
 		.addSubcommand(subcommand =>
