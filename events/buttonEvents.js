@@ -24,7 +24,7 @@ buttons.joinButton = async (interaction) => {
 			const spotifyApi = new SpotifyWebApi();
 			await spotifyApi.setAccessToken(token);
 			const data = await spotifyApi.getMyCurrentPlaybackState();
-			methods.validateResponse(data);
+			methods.validateResponse(data, true);
 			methods.addListener(interaction);
 			interaction.client.updateOnInterval = true;
 		} catch (error) {
@@ -59,12 +59,12 @@ buttons.playButton = async (interaction) => {
 			leaderToken = token;
 		try {
 			await spotifyApi.setAccessToken(leaderToken);
-			const data = await spotifyApi.getMyCurrentPlaybackState();
+			const leader = interaction.client.state[0];
 			await spotifyApi.setAccessToken(token);
-			if (data.body && data.body.is_playing)
-				await spotifyApi.pause();
+			if (leader && leader.is_playing)
+				methods.validateResponse(await spotifyApi.pause());
 			else
-				await spotifyApi.play();
+				methods.validateResponse(await spotifyApi.play());
 		} catch (error) {
 			console.log(error);
 		}
