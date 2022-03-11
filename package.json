@@ -16,7 +16,9 @@
   "version": "1.0.0",
   "description": "remote control spotify players",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "start": "node index.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/m4cey/remote-spotify.git"
