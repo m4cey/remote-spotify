@@ -28,7 +28,7 @@ function validateResponse(data, device_error) {
 }
 
 function postGuide (interaction) {
-    const url = `${process.env.domain}:${process.env.PORT}/guide`
+    const url = `${process.env.domain}`
     const embed = new MessageEmbed()
         .setTitle('Authentication required')
         .setDescription("visit the link for an easy guide")
