@@ -65,7 +65,7 @@ async function execute (userId, callback) {
         await spotifyApi.setAccessToken(token);
         await callback(spotifyApi, token, userId);
     } catch (error) {
-        console.log("in execute(): ", error);
+        console.log("in execute():", error);
     }
 }
 
@@ -80,7 +80,7 @@ async function batchExecute (callback) {
             await spotifyApi.setAccessToken(token);
             await callback(spotifyApi, token, userId);
         } catch (error) {
-            console.log(error);
+            console.log('In batchExecute():', error);
         }
     }
 }
@@ -188,7 +188,6 @@ async function getPlayingTrack (userId) {
                     id: data.body.item.id,
                     uri: data.body.item.uri,
                     url: `https://open.spotify.com/track/${data.body.item.id}`,
-                    //index: data.body.item.track_number
                 },
                 duration: data.body.item.duration_ms,
                 progress: data.body.progress_ms,
@@ -424,14 +423,15 @@ async function syncPlayback(users) {
         const spotifyApi = new SpotifyWebApi();
         const db = new StormDB(Engine);
         const margin = db.get('options.margin').value() || 10000;
+        const sync_context = db.get('options.sync_context').value() || true;
 
-        console.log("CURRENT INDEX:", leader.queue?.index);
-        console.log("QUEUE:", leader.queue?.tracks.map(track => track.name ));
+        //console.log("CURRENT INDEX:", leader.queue?.index);
+        //console.log("QUEUE:", leader.queue?.tracks.map(track => track.uri ));
         for (user of users) {
             try {
-                if (user == leader)
+                if (user == leader || user.skipping)
                     continue;
-                console.log(leader.name, leader.userId, leader.track.id);
+                console.log('>', leader.name, leader.userId, leader.track.id);
                 console.log(user.name, user.userId, user.track.id);
                 const token = await getToken(userId);
                 await spotifyApi.setAccessToken(token);
@@ -443,9 +443,25 @@ async function syncPlayback(users) {
                 unsynced ||= user.new;
                 if (unsynced) {
                     console.log(user.userId, user.name, ">>>>UNSYNCED")
-                    const options = { uris: [leader.track.uri] };
                     try {
-                        validateResponse(await spotifyApi.play(options));
+                        if (user.track.id != leader.track.id) {
+                            if (sync_context && leader.queue.tracks.length) {
+                                let unsynced = (user.track.id != leader.track.id)
+                                    && ((user.duration - user.progress) > margin);
+                                if (unsynced) {
+                                    const options = { context_uri: leader.context.uri };
+                                    validateResponse(await spotifyApi.play(options));
+                                    user.skipping = true;
+                                    for (let i = 0; i < leader.queue.index; i++) {
+                                        console.log("SKIPPING TRACK:", i, '/', leader.queue.index);
+                                        validateResponse(await spotifyApi.skipToNext());
+                                    }
+                                }
+                            } else {
+                                const options = { uris: [leader.track.uri] };
+                                validateResponse(await spotifyApi.play(options));
+                            }
+                        }
                     } catch (error) {
                         console.log("in syncPlayback().loop.play()", error.status);
                     }
@@ -462,9 +478,10 @@ async function syncPlayback(users) {
                         console.log("in syncPlayback().loop.pause()", error.status);
                     }
                     try {
-                        validateResponse(
-                            await spotifyApi.addToQueue(leader.queue.tracks[0].uri)
-                        );
+                        if (!sync_context)
+                            validateResponse(
+                                await spotifyApi.addToQueue(leader.queue.tracks[0].uri)
+                            );
                     } catch (error) {
                         console.log("in syncPlayback().loop.queue()", error.status);
                     }
@@ -536,24 +553,33 @@ async function updateRemote (interaction, data) {
                 const queue = await getQueue(data[0], 10);
                 if (queue.tracks.length) {
                     data[0].queue = queue;
-                    //console.log("CURRENT INDEX:", data[0].queue?.index);
-                    //console.log("QUEUE:", data[0].queue?.tracks.map(track => track.name ));
-                    updateQueue(data);
+                    if (!db.get('options.sync_context').value())
+                        updateQueue(data);
                     interaction.client.queue = data[0].queue;
                 }
             }
         }
         if (data[0] && !data[0].queue)
             data[0].queue = interaction.client.queue;
-        interaction.client.state = data;
 
         console.log('LISTENING:\n', data.map(user => {
             return {id: user.userId, is_playing: user.is_playing, name: user.name, new: user.new}
         }));
 
+        interaction.client.state ??= data;
         if (data.length > 1) {
-            await syncPlayback(data);
+            for (let i = 1; i < data.length; i++) {
+                data[i].skipping = interaction.client.state?.[i]?.skipping || false;
+            }
+            syncPlayback(data);
+            for (let i = 1; i < data.length; i++) {
+                console.log("SKIP ON?", data[i].name, data[i].skipping);
+                interaction.client.state = data;
+                interaction.client.state[i].skipping =
+                    (data[i].track.id == data[0].track.id) ? false : data[i].skipping;
+            }
         }
+        interaction.client.state = data;
         //interval to "smoothly" update progress between API calls
         const progressrate = db.get('options.progressrate').value() || 1000;
         if (getLeaderId() && data[0] && !interaction.client.progressId && data[0].is_playing &&

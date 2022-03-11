@@ -3,6 +3,7 @@ const { MessageEmbed } = require('discord.js');
 const StormDB = require("stormdb");
 const { Engine } = require('../database.js');
 const methods = require('../methods.js');
+const SpotifyWebApi = require('spotify-web-api-node');
 
 async function failed (interaction) {
 		const embed = new MessageEmbed()
@@ -25,18 +26,26 @@ module.exports = {
 				await interaction.reply({ embeds: [{ description: 'not a track' }] });
 				return;
 			}
-			const uri = "spotify:track:" + url.slice(-42, -20);
+			//0000000000X000000000X000000000X1hGRe4d3LJCg1VszAU8Cy1?si=335842403662483d
+			const uri = "spotify:track:" + url.slice(31).split('?')[0];
+			console.log(uri);
+			/*
 			await methods.batchExecute(async (spotifyApi, token, userId) => {
 				try {
 					methods.validateResponse(await spotifyApi.addToQueue(uri));
-					await interaction.reply({ embeds: [{description: 'track has been queued'}] });
 				} catch (error) {
-					console.log(error);
-					await failed(interaction);
+					console.log("in execute().batch:", userId, error);
+					throw "batch execute failed"
 				}
 			});
+			*/
+			const spotifyApi = new SpotifyWebApi();
+			const token = await methods.getToken(interaction.user.id);
+			spotifyApi.setAccessToken(token);
+			methods.validateResponse(await spotifyApi.addToQueue(uri));
+			await interaction.reply({ embeds: [{description: 'track has been queued'}] });
 		} catch (error) {
-			console.log(error);
+			console.log("in execute():", error);
 			await failed(interaction);
 		}
 	}

@@ -12,6 +12,7 @@ module.exports = {
 			'authenticated': {},
 			'options': {
 				'followup': true,
+				'sync_context': true,
 				'threshold': 6,
 				'updaterate': 5000,
 				'progressrate': 1000,

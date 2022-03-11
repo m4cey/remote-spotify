@@ -24,6 +24,14 @@ module.exports = {
 				.setDescription('enable or disable follow up messages')
 				.setRequired(true)))
 		.addSubcommand(subcommand =>
+			subcommand.setName('sync_context')
+			.setDescription('sync the playing context')
+			.addBooleanOption(option =>
+				option
+				.setName('enabled')
+				.setDescription('enable or disable synced context')
+				.setRequired(true)))
+		.addSubcommand(subcommand =>
 			subcommand.setName('threshold')
 			.setDescription('The amount of messages before sending a follow up')
 			.addIntegerOption(option =>
@@ -60,6 +68,7 @@ module.exports = {
 				value = 1000 * interaction.options.getNumber('time');
 				break;
 			case 'followup':
+			case 'sync_context':
 				value = interaction.options.getBoolean('enabled');
 				break;
 			case 'threshold':
