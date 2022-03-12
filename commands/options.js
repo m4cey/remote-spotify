@@ -9,7 +9,7 @@ module.exports = {
 		.setDescription('set options?')
 		.addSubcommand(subcommand =>
 			subcommand.setName('updaterate')
-			.setDescription('the content update rate')
+			.setDescription('the rate by which to check the API for changes')
 			.addNumberOption(option =>
 				option
 				.setName('float')
@@ -40,8 +40,8 @@ module.exports = {
 				.setDescription('a number, not a letter. a NUMBER')
 				.setRequired(true)))
 		.addSubcommand(subcommand =>
-			subcommand.setName('progressrate')
-			.setDescription('the progress update rate')
+			subcommand.setName('refreshrate')
+			.setDescription('the rate by which to update the embed display')
 			.addNumberOption(option =>
 				option
 				.setName('float')
@@ -63,7 +63,7 @@ module.exports = {
 		let value;
 		switch (option) {
 			case 'updaterate':
-			case 'progressrate':
+			case 'refreshrate':
 			case 'margin':
 				value = 1000 * interaction.options.getNumber('float');
 				break;

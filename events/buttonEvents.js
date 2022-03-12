@@ -26,7 +26,6 @@ buttons.joinButton = async (interaction) => {
 			const data = await spotifyApi.getMyCurrentPlaybackState();
 			methods.validateResponse(data, true);
 			methods.addListener(interaction);
-			interaction.client.updateOnInterval = true;
 		} catch (error) {
 			console.log('in JoinButton():', error);
 			if (error.status == 204) {
@@ -42,11 +41,6 @@ buttons.joinButton = async (interaction) => {
 
 buttons.leaveButton = (interaction) => {
 	methods.removeListener(interaction.user.id);
-	if (!methods.getLeaderId() && interaction.client.intervalId) {
-		clearInterval(interaction.client.intervalId);
-		interaction.client.intervalId = 0;
-		interaction.client.updateOnInterval = false;
-	}
 }
 
 buttons.playButton = async (interaction) => {
@@ -59,7 +53,7 @@ buttons.playButton = async (interaction) => {
 			leaderToken = token;
 		try {
 			await spotifyApi.setAccessToken(leaderToken);
-			const leader = interaction.client.state[0];
+			const leader = methods.isPlaying();
 			await spotifyApi.setAccessToken(token);
 			if (leader && leader.is_playing)
 				methods.validateResponse(await spotifyApi.pause());
@@ -110,7 +104,7 @@ buttons.likeButton = async (interaction) => {
 
 buttons.refreshButton = async (interaction) => {
 	//TODO reset timers and cancel update queue somehow?
-	await wait(1000);
+	methods.refreshRemote();
 }
 
 module.exports = {
@@ -122,16 +116,7 @@ module.exports = {
 			const db = new StormDB(Engine);
 			await interaction.deferUpdate();
 			await buttons[interaction.customId + 'Button'](interaction);
-			//console.log(interaction.customId, ':button function has finished');
-			await methods.updateRemote(interaction);
-			if (interaction.client.updateOnInterval) {
-				if (interaction.client.intervalId)
-					clearInterval(interaction.client.intervalId)
-				const delay = db.get('options.updaterate').value() || 5000;
-				console.log(`setting an interval of ${delay} milliseconds`);
-				interaction.client.intervalId =
-					setInterval(methods.updateRemote, delay, interaction);
-			}
+			await methods.remote(interaction);
 		} catch (error) {
 			console.log(error);
 		}
