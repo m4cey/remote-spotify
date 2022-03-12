@@ -12,7 +12,7 @@ async function retrieveDB () {
 	try {
 		await sftp.fastGet('/storage/db.stormdb', '../db.stormdb');
 	} catch (error) {
-		console.log('Couldn\'t retrieve db');
+		console.log('Couldn\'t retrieve db', error);
 	}
 }
 
