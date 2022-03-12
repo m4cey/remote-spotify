@@ -90,8 +90,9 @@ function getPlayingTrack () {
 }
 
 function isSaved(userId) {
-    if (userId && listening[userId]) {
-        return state[userId].is_saved;
+    if (userId) {
+        const user = state.filter(user => user.userId == userId)[0];
+        return user.is_saved;
     }
 }
 
