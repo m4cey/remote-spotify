@@ -402,7 +402,7 @@ async function syncPlayback(users) {
             unsynced ||= (user.track.id != leader.track.id)
                 && ((user.duration - user.progress) > margin);
             unsynced ||= user.new;
-            if (unsynced)
+            if (!unsynced)
                 continue;
             console.log(user.userId, user.name, ">>>>UNSYNCED")
             try {
