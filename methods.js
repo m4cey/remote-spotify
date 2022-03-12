@@ -100,9 +100,20 @@ function getLeaderId() {
     return leaderId = listening[0];
 }
 
-async function isPlaying () {
-    return state[0].is_playing;
+function getListening() {
+    return listening;
 }
+
+function getPlayingTrack () {
+    return { id: state[0].track.id, is_playing: state[0].is_playing }
+}
+
+function isSaved(userId) {
+    if (userId && listening[userId]) {
+        return state[userId].is_saved;
+    }
+}
+
 
 async function getQueue(data, limit) {
     console.log(">>>getQueue()");
@@ -162,7 +173,7 @@ async function getQueue(data, limit) {
     }
 }
 
-async function getPlayingTrack (userId) {
+async function getPlaybackData (userId) {
     const spotifyApi = new SpotifyWebApi();
 
     userId = userId || getLeaderId();
@@ -220,30 +231,7 @@ async function getPlayingTrack (userId) {
             }
             return (res);
         } catch (error) {
-            console.log('in getPlayingTrack(): ', error);
-            if (error.status == 204) {
-                removeListener(userId);
-            }
-        }
-    }
-}
-
-async function trackIsSaved(userId) {
-    const spotifyApi = new SpotifyWebApi();
-
-    if (userId) {
-        try {
-            const token = await getToken(userId);
-            spotifyApi.setAccessToken(token);
-            let track = await getPlayingTrack(userId);
-            if (!track)
-                throw "track object is null";
-            const data = await spotifyApi.containsMySavedTracks([track.track.id]);
-            validateResponse(data, true);
-            track.is_saved = data.body[0];
-            return (track);
-        } catch (error) {
-            console.log("In trackIsSaved():", error);
+            console.log('in getPlaybackData(): ', error);
             if (error.status == 204) {
                 removeListener(userId);
             }
@@ -266,7 +254,7 @@ async function getUserData(interaction) {
     console.log("getUserData()");
     for (userId of listening) {
         try {
-            let data = await getPlayingTrack(userId);
+            let data = await getPlaybackData(userId);
             if (!data)
                 throw "data object is null";
             data.name = await getUsername(interaction, userId);
@@ -285,7 +273,7 @@ function getContextData(data) {
         if (!data.context) throw "data.context is null";
         if (!data.context.type) throw "data.context.type is null";
         if (data.context.type == 'artist') throw "artist context not supported";
-        //console.log("CONTEXT:", data.context);
+        console.log("CONTEXT:", data.context);
         const type = data.context.type;
         const index = data.queue ? ` (${data.queue.index + 1}/${data.queue.total})` : '';
         context = {
@@ -327,11 +315,12 @@ function formatQueue(data) {
 
 async function remoteMessage (data) {
     const users = formatNameList(data);
-    const userCount = data.length;
-    const context = getContextData(data[0]);
+    const userCount = data ? data.length : 0;
+    const context = getContextData(data ? data[0] : null);
     console.log("CONTEXT:", context);
-    const queue = formatQueue(data[0]);
-    if (!data[0]) {
+    const queue = formatQueue(data ? data[0] : null);
+    if (!data || !data[0]) {
+        data = [{}];
         const list = ['HELP!', 'PLEASE', 'GETMEOUTOFHERE', 'JUSTKEEPURCOOKIES',
             'SHEHURTSME', 'IWANTOUT', 'CALLCPS', 'HELPME', 'AAAAAAAAAAAAAAAAAAAAAAAAA'];
         data[0] = {
@@ -511,6 +500,7 @@ async function updateQueue(users) {
 }
 
 async function refreshRemote (interaction) {
+    const db = new StormDB(Engine);
     const options = db.get('options').value();
 
     if (!getLeaderId()) {
@@ -571,7 +561,11 @@ async function updateRemote (interaction) {
         }
 
         lastMessage ??= interaction.message;
-        data ??= await getUserData(interaction);
+        let data = await getUserData(interaction);
+        if (!data) {
+            state = null;
+            throw "data object is null"
+        }
         // update new users
         let newUsers = 0;
         if (state)
@@ -638,6 +632,8 @@ async function updateRemote (interaction) {
 }
 
 async function remote (interaction) {
+    const db = new StormDB(Engine);
+
     await updateRemote(interaction);
     if (updateOnInterval) {
         if (updateIntervalId)
@@ -646,6 +642,7 @@ async function remote (interaction) {
         console.log(`setting an update interval of ${delay} milliseconds`);
         updateIntervalId = setInterval(updateRemote, delay, interaction);
     }
+    refreshRemote(interaction);
     if (refreshOnInterval) {
         if (refreshIntervalId)
             clearInterval(refreshIntervalId)
@@ -688,7 +685,6 @@ function removeListener (userId) {
 }
 
 module.exports = {
-    updateRemote,
     isListener,
     addListener,
     removeListener,
@@ -698,12 +694,9 @@ module.exports = {
     getToken,
     apiError,
     validateResponse,
-    isPlaying,
-    remoteMessage,
-    getUserData,
-    trackIsSaved,
-    getUsername,
     getPlayingTrack,
+    isSaved,
     getLeaderId,
+    getListening,
     remote
 };

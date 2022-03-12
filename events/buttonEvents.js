@@ -44,62 +44,69 @@ buttons.leaveButton = (interaction) => {
 }
 
 buttons.playButton = async (interaction) => {
-	const db = new StormDB(Engine);
 	if (!methods.isListener(interaction.user.id)) return;
-	const leaderId = methods.getLeaderId();
-	let leaderToken;
-	await methods.batchExecute(async (spotifyApi, token, userId) => {
-		if (userId == leaderId)
-			leaderToken = token;
+	const listening = methods.getListening();
+	const { is_playing } = methods.getPlayingTrack();
+	const spotifyApi = new SpotifyWebApi();
+	for (user of listening) {
 		try {
-			await spotifyApi.setAccessToken(leaderToken);
-			const leader = methods.isPlaying();
-			await spotifyApi.setAccessToken(token);
-			if (leader && leader.is_playing)
+			const token = await methods.getToken(user);
+			spotifyApi.setAccessToken(token);
+			if (is_playing)
 				methods.validateResponse(await spotifyApi.pause());
 			else
 				methods.validateResponse(await spotifyApi.play());
 		} catch (error) {
 			console.log(error);
 		}
-	});
+	}
 }
 
 buttons.previousButton = async (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return;
-	await methods.batchExecute(async (spotifyApi, token, userId) => {
+	const listening = methods.getListening();
+	const spotifyApi = new SpotifyWebApi();
+	for (user of listening) {
 		try {
-			await spotifyApi.skipToPrevious();
+			const token = await methods.getToken(user);
+			spotifyApi.setAccessToken(token);
+			methods.validateResponse(await spotifyApi.skipToPrevious());
 		} catch (error) {
 			console.log(error);
 		}
-	});
+	}
 }
 
 buttons.nextButton = async (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return;
-	await methods.batchExecute(async (spotifyApi, token, userId) => {
+	const listening = methods.getListening();
+	const spotifyApi = new SpotifyWebApi();
+	for (user of listening) {
 		try {
-			await spotifyApi.skipToNext();
+			const token = await methods.getToken(user);
+			spotifyApi.setAccessToken(token);
+			methods.validateResponse(await spotifyApi.skipToNext());
 		} catch (error) {
 			console.log(error);
 		}
-	});
+	}
 }
 
 buttons.likeButton = async (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return;
-	await methods.execute(interaction.user.id, async (spotifyApi, token, userId) => {
-		try {
-			const data = await methods.trackIsSaved(userId);
-			if (data.is_saved)
-				await spotifyApi.removeFromMySavedTracks([data.track.id]);
-			else
-				await spotifyApi.addToMySavedTracks([data.track.id]);
-		} catch (error) {
-			console.log(error);
-		}
-	});
+	try {
+		const is_saved = methods.isSaved(interaction.user.id);
+		const { id } = methods.getPlayingTrack();
+		const token = await methods.getToken(interaction.user.id);
+		const spotifyApi = new SpotifyWebApi();
+		spotifyApi.setAccessToken(token);
+		if (is_saved)
+			methods.validateResponse(await spotifyApi.removeFromMySavedTracks([id]), true);
+		else
+			methods.validateResponse(await spotifyApi.addToMySavedTracks([id]), true);
+	} catch (error) {
+		console.log(error);
+	}
 }
 
 buttons.refreshButton = async (interaction) => {
