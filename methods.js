@@ -1,20 +1,22 @@
+require('dotenv').config();
 const axios = require('axios').default;
 const SpotifyWebApi = require('spotify-web-api-node');
 const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
 const StormDB = require("stormdb");
 const { Engine } = require('./database.js');
-const dotenv = require('dotenv');
-dotenv.config();
 
 const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
 dayjs().format();
 dayjs.extend(duration);
 
+let listening = [];
+
 function apiError(message, status) {
     this.message = message;
     this.status = status;
 }
+
 function validateResponse(data, device_error) {
     if (!data)
         throw new apiError("Can't connect to spotify API", 503);
@@ -72,10 +74,8 @@ async function execute (userId, callback) {
 
 async function batchExecute (callback) {
     const spotifyApi = new SpotifyWebApi();
-    const db = new StormDB(Engine);
 
-    const userIds = db.get('listening').value();
-    for (userId of userIds) {
+    for (userId of listening) {
         try {
             const token = await getToken(userId);
             await spotifyApi.setAccessToken(token);
@@ -87,8 +87,7 @@ async function batchExecute (callback) {
 }
 
 function getLeaderId() {
-    const db = new StormDB(Engine);
-    return leaderId = db.get('listening').value()[0];
+    return leaderId = listening[0];
 }
 
 async function isPlaying () {
@@ -269,13 +268,10 @@ async function getUsername(interaction, userId) {
 
 async function getUserData(interaction) {
     const spotifyApi = new SpotifyWebApi();
-    const db = new StormDB(Engine);
-    const userIds = db.get('listening').value();
 
-    if (!userIds)	return;
     let users = [];
     console.log("getUserData()");
-    for (userId of userIds) {
+    for (userId of listening) {
         try {
             let data = await getPlayingTrack(userId);
             if (!data)
@@ -292,7 +288,7 @@ async function getUserData(interaction) {
 function getContextData(data) {
     let context = { name: '' };
     try {
-        if (!data) throw "data object is null";
+        if (!data || !data.length) throw "data object is null or empty";
         if (!data.context) throw "data.context is null";
         if (!data.context.type) throw "data.context.type is null";
         if (data.context.type == 'artist') throw "artist context not supported";
@@ -673,26 +669,19 @@ async function onTrackChange (interaction) {
 }
 
 function isListener (userId) {
-    const db = new StormDB(Engine);
-    const userIds = db.get('listening').value();
-    return userIds.includes(userId);
+    return listening.includes(userId);
 }
 
 function addListener (interaction) {
-    const db = new StormDB(Engine);
     console.log('Adding listener ' + interaction.user.tag);
-    db.get('listening').push(interaction.user.id).save();
-    console.log(db.get('listening').value());
+    listening.push(interaction.user.id);
+    console.log(listening);
 }
 
 function removeListener (userId) {
-    const db = new StormDB(Engine);
     console.log('Removing listener ', userId);
-    const userIds = db.get('listening').value();
-    if (!userIds) return;
-    const newListeners = userIds.filter(user => user != userId);
-    db.get('listening').set(newListeners).save();
-    console.log(db.get('listening').value());
+    listening = listening.filter(user => user != userId);
+    console.log(listening);
 }
 
 module.exports = {

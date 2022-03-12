@@ -52,7 +52,7 @@ buttons.leaveButton = (interaction) => {
 buttons.playButton = async (interaction) => {
 	const db = new StormDB(Engine);
 	if (!methods.isListener(interaction.user.id)) return;
-	const leaderId = db.get('listening').value()[0];
+	const leaderId = methods.getLeaderId();
 	let leaderToken;
 	await methods.batchExecute(async (spotifyApi, token, userId) => {
 		if (userId == leaderId)
