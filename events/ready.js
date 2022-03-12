@@ -10,16 +10,16 @@ async function retrieveDB () {
 	sftp = await createConnection();
 	console.log('Retrieving stormdb file');
 	try {
-		await sftp.fastGet('/storage/db.stormdb', '../db.stormdb');
+		await sftp.fastGet('/storage/db.stormdb', '/tmp/db.stormdb');
 	} catch (error) {
 		console.log('Couldn\'t retrieve db', error);
 	}
 }
 
 async function updateDB () {
-	await fs.watch('db.stormdb', async () => {
+	await fs.watch('/tmp/db.stormdb', async () => {
 		console.log("db changed, uploading...");
-		await sftp.fastPut('../db.stormdb', '/storage/db.stormdb');
+		await sftp.fastPut('/tmp/db.stormdb', '/storage/db.stormdb');
 		console.log("finished uploading...");
 	});
 }
