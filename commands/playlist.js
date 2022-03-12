@@ -26,14 +26,6 @@ module.exports = {
 				return;
 			}
 			const context = "spotify:playlist:" + url.slice(-42, -20);
-			await methods.batchExecute(async (spotifyApi, token, userId) => {
-				try {
-					await spotifyApi.play({ context_uri: context });
-				} catch (error) {
-					console.log(error);
-					await failed(interaction);
-				}
-			});
 		} catch (error) {
 			console.log(error);
 			await failed(interaction);

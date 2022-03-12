@@ -29,16 +29,6 @@ module.exports = {
 			//0000000000X000000000X000000000X1hGRe4d3LJCg1VszAU8Cy1?si=335842403662483d
 			const uri = "spotify:track:" + url.slice(31).split('?')[0];
 			console.log(uri);
-			/*
-			await methods.batchExecute(async (spotifyApi, token, userId) => {
-				try {
-					methods.validateResponse(await spotifyApi.addToQueue(uri));
-				} catch (error) {
-					console.log("in execute().batch:", userId, error);
-					throw "batch execute failed"
-				}
-			});
-			*/
 			const spotifyApi = new SpotifyWebApi();
 			const token = await methods.getToken(interaction.user.id);
 			spotifyApi.setAccessToken(token);

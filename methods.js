@@ -69,31 +69,12 @@ async function getToken (userId) {
     }
 }
 
-async function execute (userId, callback) {
-    const spotifyApi = new SpotifyWebApi();
-    const db = new StormDB(Engine);
-
-    try {
-        const token = await getToken(userId);
-        await spotifyApi.setAccessToken(token);
-        await callback(spotifyApi, token, userId);
-    } catch (error) {
-        console.log("in execute():", error);
-    }
+function getLastMessage() {
+    return lastMessage;
 }
 
-async function batchExecute (callback) {
-    const spotifyApi = new SpotifyWebApi();
-
-    for (userId of listening) {
-        try {
-            const token = await getToken(userId);
-            await spotifyApi.setAccessToken(token);
-            await callback(spotifyApi, token, userId);
-        } catch (error) {
-            console.log('In batchExecute():', error);
-        }
-    }
+function setLastMessage(message) {
+    lastMessage = message;
 }
 
 function getLeaderId() {
@@ -269,7 +250,7 @@ async function getUserData(interaction) {
 function getContextData(data) {
     let context = { name: '' };
     try {
-        if (!data || !data.length) throw "data object is null or empty";
+        if (!data) throw "data object is null or empty";
         if (!data.context) throw "data.context is null";
         if (!data.context.type) throw "data.context.type is null";
         if (data.context.type == 'artist') throw "artist context not supported";
@@ -538,11 +519,14 @@ async function refreshRemote (interaction) {
     } else {
         if (JSON.stringify(oldMessage) != JSON.stringify(message)) {
             console.log("edititing reply...");
-            await lastMessage.edit(message);
+            if (lastMessage)
+                await lastMessage.edit(message);
+            else {
+                lastMessage = await interaction.message.edit(message);
+            }
             console.log("message refreshed");
         } else
             console.log("skipping message refresh, identical");
-        oldMessage = message;
     }
 }
 
@@ -689,15 +673,17 @@ module.exports = {
     addListener,
     removeListener,
     postGuide,
-    batchExecute,
-    execute,
     getToken,
     apiError,
     validateResponse,
     getPlayingTrack,
     isSaved,
+    getLastMessage,
+    setLastMessage,
     getLeaderId,
     getListening,
+    getUserData,
     remote,
-    refreshRemote
+    refreshRemote,
+    remoteMessage
 };
