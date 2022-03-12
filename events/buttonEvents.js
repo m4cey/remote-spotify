@@ -19,9 +19,9 @@ buttons.joinButton = async (interaction) => {
 	const userId = interaction.user.id;
 	if (userIds.includes(userId)) {
 		console.log('USERID: ', userId);
+		const spotifyApi = new SpotifyWebApi();
 		try {
 			const token = await methods.getToken(userId);
-			const spotifyApi = new SpotifyWebApi();
 			await spotifyApi.setAccessToken(token);
 			const data = await spotifyApi.getMyCurrentPlaybackState();
 			methods.validateResponse(data, true);
@@ -102,11 +102,11 @@ buttons.nextButton = async (interaction) => {
 
 buttons.likeButton = async (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return;
+	const spotifyApi = new SpotifyWebApi();
+	const is_saved = methods.isSaved(interaction.user.id);
+	const { id } = methods.getPlayingTrack();
 	try {
-		const is_saved = methods.isSaved(interaction.user.id);
-		const { id } = methods.getPlayingTrack();
 		const token = await methods.getToken(interaction.user.id);
-		const spotifyApi = new SpotifyWebApi();
 		spotifyApi.setAccessToken(token);
 		if (is_saved)
 			methods.validateResponse(await spotifyApi.removeFromMySavedTracks([id]), true);
