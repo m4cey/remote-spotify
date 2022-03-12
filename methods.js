@@ -698,5 +698,6 @@ module.exports = {
     isSaved,
     getLeaderId,
     getListening,
-    remote
+    remote,
+    refreshRemote
 };

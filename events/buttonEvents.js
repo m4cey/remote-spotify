@@ -111,7 +111,7 @@ buttons.likeButton = async (interaction) => {
 
 buttons.refreshButton = async (interaction) => {
 	//TODO reset timers and cancel update queue somehow?
-	methods.refreshRemote();
+	methods.refreshRemote(interaction);
 }
 
 module.exports = {

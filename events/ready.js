@@ -28,8 +28,8 @@ module.exports = {
 	name: 'ready',
 	once: true,
 	async execute(client) {
-		//await retrieveDB();
-		//updateDB();
+		await retrieveDB();
+		updateDB();
 		console.log(`Ready! Logged in as ${client.user.tag}`);
 		const db = new StormDB(Engine);
 		db.default({
