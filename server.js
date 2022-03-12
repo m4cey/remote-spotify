@@ -1,7 +1,6 @@
 const fastify = require('fastify')({ logger: false });
 const path = require('path');
-const dotenv = require('dotenv');
-dotenv.config();
+require('dotenv').config();
 
 // Declare a route
 fastify.register(require('fastify-static'), {

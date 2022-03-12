@@ -1,7 +1,7 @@
+require('dotenv').config();
 const fs = require('node:fs');
 const { startServer } = require('./server.js');
 const { Client, Collection, Intents, MessageEmbed } = require('discord.js');
-const dotenv = require('dotenv').config();
 
 // Create a new client instance
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
@@ -19,7 +19,7 @@ for (const file of commandFiles) {
 for (const file of eventFiles) {
 	const event = require(`./events/${file}`);
 	if (event.once) {
-		client.once(event.name, (...args) => event.execute(...args));
+		client.once(event.name, async (...args) => await event.execute(...args));
 	} else {
 		client.on(event.name, async (...args) => await event.execute(...args));
 	}
