@@ -531,7 +531,7 @@ async function refreshRemote (interaction) {
 }
 
 function compareState(data) {
-    if (state.length != data.length || state.track.id != data[0].track.id) return true;
+    if (state.length != data.length || state[0].track.id != data[0].track.id) return true;
     for (let i = 0; i < data.length; i++) {
         let changed = state[i].is_playing != data[i].is_playing;
         changed ||= state[i].is_saved != data[i].is_saved;
