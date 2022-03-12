@@ -396,6 +396,7 @@ async function syncPlayback(users) {
             if (!unsynced)
                 continue;
             console.log(user.userId, user.name, ">>>>UNSYNCED")
+            let multiUris = false;
             try {
                 if (user.track.id != leader.track.id) {
                     if (sync_context && leader.queue.tracks.length
@@ -408,7 +409,16 @@ async function syncPlayback(users) {
                                 i+1, '/', leader.queue.index);
                             validateResponse(await spotifyApi.skipToNext());
                         }
-                    } else {
+                    } else if (leader.queue.tracks.length > 1)  {
+                        const options = {
+                            uris: leader.queue.tracks.map(track => track.uri),
+                            offset: 0,
+                            position_ms: leader.progress
+                        };
+                        validateResponse(await spotifyApi.play(options));
+                        multiUris = true;
+                    }
+                    else {
                         const options = { uris: [leader.track.uri] };
                         validateResponse(await spotifyApi.play(options));
                     }
@@ -417,8 +427,9 @@ async function syncPlayback(users) {
                 console.log("in syncPlayback().loop.play()", error.status);
             }
             try {
-                validateResponse(await spotifyApi.seek(leader.progress
-                    + leader.is_playing * 2000));
+                if (!multiUris)
+                    validateResponse(await spotifyApi.seek(leader.progress
+                        + leader.is_playing * 1000));
             } catch (error) {
                 console.log("in syncPlayback().loop.seek()", error.status);
             }
@@ -429,7 +440,7 @@ async function syncPlayback(users) {
                 console.log("in syncPlayback().loop.pause()", error.status);
             }
             try {
-                if (!sync_context)
+                if (!sync_context && !multiUris)
                     validateResponse(
                         await spotifyApi.addToQueue(leader.queue.tracks[0].uri)
                     );
@@ -549,8 +560,6 @@ async function updateRemote (interaction) {
         // update queue only on track change
         if (state?.[0]?.track?.id != data[0]?.track.id) {
             data[0].queue = await getQueue(data[0], 10);
-            if (!db.get('options.sync_context').value())
-                updateQueue(data);
             queue = data[0].queue;
         }
         if (data[0] && !data[0].queue)
