@@ -62,7 +62,6 @@ async function getToken (userId) {
     };
     try {
         const res = await axios(options);
-        console.log("token request status: ", res.statusText, res.status);
         return (res.data.accessToken);
     } catch (error) {
         console.log(error);
@@ -531,6 +530,16 @@ async function refreshRemote (interaction) {
     }
 }
 
+function compareState(data) {
+    if (state.length != data.length || state.track.id != data[0].track.id) return true;
+    for (let i = 0; i < data.length; i++) {
+        let changed = state[i].is_playing != data[i].is_playing;
+        changed ||= state[i].is_saved != data[i].is_saved;
+        if (changed) return true;
+    }
+    return false;
+}
+
 async function updateRemote (interaction) {
     //TODO  skip late message updates, slow net fix?
     const db = new StormDB(Engine);
@@ -582,7 +591,6 @@ async function updateRemote (interaction) {
             }
         }));
 
-        //interaction.client.state ??= data;
         if (data.length > 1) {
             for (let i = 1; i < data.length; i++) {
                 data[i].skipping = state?.[i]?.skipping || false;
@@ -594,6 +602,9 @@ async function updateRemote (interaction) {
                     (data[i].track.id == data[0].track.id) ? false : data[i].skipping;
             }
         }
+        if (compareState(data))
+            refreshRemote(interaction);
+        // update local state; no manipulating data after this point
         state = data;
         //timeout to update on estimated track end
         try {

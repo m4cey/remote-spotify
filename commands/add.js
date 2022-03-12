@@ -26,7 +26,6 @@ module.exports = {
 				await interaction.reply({ embeds: [{ description: 'not a track' }] });
 				return;
 			}
-			//0000000000X000000000X000000000X1hGRe4d3LJCg1VszAU8Cy1?si=335842403662483d
 			const uri = "spotify:track:" + url.slice(31).split('?')[0];
 			console.log(uri);
 			const spotifyApi = new SpotifyWebApi();
