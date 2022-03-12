@@ -411,7 +411,8 @@ async function syncPlayback(users) {
                         }
                     } else if (leader.queue.tracks.length > 1)  {
                         const options = {
-                            uris: leader.queue.tracks.map(track => track.uri),
+                            uris: leader.queue.tracks.map(track =>
+                            'spotify:track:' + track.id),
                             offset: 0,
                             position_ms: leader.progress
                         };
