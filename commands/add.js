@@ -20,15 +20,15 @@ module.exports = {
 					.setDescription('spotify track url')
 					.setRequired(true)),
 	async execute(interaction) {
+		const spotifyApi = new SpotifyWebApi();
+		const url = interaction.options.getString('track');
+		if (!url.includes('track')) {
+			await interaction.reply({ embeds: [{ description: 'not a track' }] });
+			return;
+		}
+		const uri = "spotify:track:" + url.slice(31).split('?')[0];
+		console.log(uri);
 		try {
-			const url = interaction.options.getString('track');
-			if (!url.includes('track')) {
-				await interaction.reply({ embeds: [{ description: 'not a track' }] });
-				return;
-			}
-			const uri = "spotify:track:" + url.slice(31).split('?')[0];
-			console.log(uri);
-			const spotifyApi = new SpotifyWebApi();
 			const token = await methods.getToken(interaction.user.id);
 			spotifyApi.setAccessToken(token);
 			methods.validateResponse(await spotifyApi.addToQueue(uri));
@@ -36,6 +36,8 @@ module.exports = {
 		} catch (error) {
 			console.log("in execute():", error);
 			await failed(interaction);
+		} finally {
+			spotifyApi.resetAccessToken();
 		}
 	}
 };

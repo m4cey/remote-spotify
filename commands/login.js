@@ -37,8 +37,6 @@ module.exports = {
 						db.get('authenticated').get(interaction.user.id).delete();
 					db.save();
 					success = false;
-				} finally {
-					spotifyApi.resetAccessToken();
 				}
 				if (!success) {
 					if (oldCookie)
