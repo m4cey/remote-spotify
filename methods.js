@@ -147,6 +147,7 @@ async function getQueue(data, limit) {
         } while (!found || !done);
         let queue = { tracks: [], index: index, total: tracks.body.total };
         tracks.body.items.forEach(item => queue.tracks.push(item.track));
+        spotifyApi.resetAccessToken();
         return queue;
     } catch (error) {
         console.log('in getQueue():', error);
@@ -216,6 +217,8 @@ async function getPlaybackData (userId) {
             if (error.status == 204) {
                 removeListener(userId);
             }
+        } finally {
+            spotifyApi.resetAccessToken();
         }
     }
 }
@@ -386,68 +389,63 @@ async function syncPlayback(users) {
         const sync_context = db.get('options.sync_context').value() || true;
 
         for (user of users) {
+            if (user == leader || user.skipping)
+                continue;
+            console.log('>', leader.name, leader.userId, leader.track.id);
+            console.log(user.name, user.userId, user.track.id);
+            const token = await getToken(user.userId);
+            await spotifyApi.setAccessToken(token);
+
+            let unsynced = user.is_playing != leader.is_playing;
+            unsynced ||= (user.track.id == leader.track.id)
+                && (Math.abs(user.progress - leader.progress) > margin);
+            unsynced ||= (user.track.id != leader.track.id)
+                && ((user.duration - user.progress) > margin);
+            unsynced ||= user.new;
+            if (unsynced)
+                continue;
+            console.log(user.userId, user.name, ">>>>UNSYNCED")
             try {
-                if (user == leader || user.skipping)
-                    continue;
-                console.log('>', leader.name, leader.userId, leader.track.id);
-                console.log(user.name, user.userId, user.track.id);
-                const token = await getToken(userId);
-                await spotifyApi.setAccessToken(token);
-                let unsynced = user.is_playing != leader.is_playing;
-                unsynced ||= (user.track.id == leader.track.id)
-                    && (Math.abs(user.progress - leader.progress) > margin);
-                unsynced ||= (user.track.id != leader.track.id)
-                    && ((user.duration - user.progress) > margin);
-                unsynced ||= user.new;
-                if (unsynced) {
-                    console.log(user.userId, user.name, ">>>>UNSYNCED")
-                    try {
-                        if (user.track.id != leader.track.id) {
-                            if (sync_context && leader.queue.tracks.length) {
-                                let unsynced = (user.track.id != leader.track.id)
-                                    && ((user.duration - user.progress) > margin);
-                                if (unsynced) {
-                                    const options = { context_uri: leader.context.uri };
-                                    validateResponse(await spotifyApi.play(options));
-                                    user.skipping = leader.queue.index > 0;
-                                    for (let i = 0; i < leader.queue.index; i++) {
-                                        console.log("SKIPPING TRACK:",
-                                            i+1, '/', leader.queue.index);
-                                        validateResponse(await spotifyApi.skipToNext());
-                                    }
-                                }
-                            } else {
-                                const options = { uris: [leader.track.uri] };
-                                validateResponse(await spotifyApi.play(options));
-                            }
+                if (user.track.id != leader.track.id) {
+                    if (sync_context && leader.queue.tracks.length
+                        && (user.duration - user.progress) > margin) {
+                        const options = { context_uri: leader.context.uri };
+                        validateResponse(await spotifyApi.play(options));
+                        user.skipping = leader.queue.index > 0;
+                        for (let i = 0; i < leader.queue.index; i++) {
+                            console.log("SKIPPING TRACK:",
+                                i+1, '/', leader.queue.index);
+                            validateResponse(await spotifyApi.skipToNext());
                         }
-                    } catch (error) {
-                        console.log("in syncPlayback().loop.play()", error.status);
-                    }
-                    try {
-                        validateResponse(await spotifyApi.seek(leader.progress
-                            + leader.is_playing * 2000));
-                    } catch (error) {
-                        console.log("in syncPlayback().loop.seek()", error.status);
-                    }
-                    try {
-                        if (!leader.is_playing)
-                            validateResponse(await spotifyApi.pause());
-                    } catch (error) {
-                        console.log("in syncPlayback().loop.pause()", error.status);
-                    }
-                    try {
-                        if (!sync_context)
-                            validateResponse(
-                                await spotifyApi.addToQueue(leader.queue.tracks[0].uri)
-                            );
-                    } catch (error) {
-                        console.log("in syncPlayback().loop.queue()", error.status);
+                    } else {
+                        const options = { uris: [leader.track.uri] };
+                        validateResponse(await spotifyApi.play(options));
                     }
                 }
             } catch (error) {
-                console.log('In syncPlayback().loop:', error, 'user:', userId);
+                console.log("in syncPlayback().loop.play()", error.status);
             }
+            try {
+                validateResponse(await spotifyApi.seek(leader.progress
+                    + leader.is_playing * 2000));
+            } catch (error) {
+                console.log("in syncPlayback().loop.seek()", error.status);
+            }
+            try {
+                if (!leader.is_playing)
+                    validateResponse(await spotifyApi.pause());
+            } catch (error) {
+                console.log("in syncPlayback().loop.pause()", error.status);
+            }
+            try {
+                if (!sync_context)
+                    validateResponse(
+                        await spotifyApi.addToQueue(leader.queue.tracks[0].uri)
+                    );
+            } catch (error) {
+                console.log("in syncPlayback().loop.queue()", error.status);
+            }
+            spotifyApi.resetAccessToken();
         }
     } catch (error) {
         console.log('In syncPlayback():', error);
@@ -473,6 +471,8 @@ async function updateQueue(users) {
                 );
             } catch (error) {
                 console.log('In updateQueue().loop:', error, 'user:', userId);
+            } finally {
+                spotifyApi.resetAccessToken();
             }
         }
     } catch (error) {
@@ -531,7 +531,7 @@ async function refreshRemote (interaction) {
 }
 
 function compareState(data) {
-    if (!state || !state.length || state.length != data.length
+    if (!state || state.length != data.length
         || state[0].track.id != data[0].track.id) return true;
     for (let i = 0; i < data.length; i++) {
         let changed = state[i].is_playing != data[i].is_playing;

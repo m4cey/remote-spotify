@@ -33,6 +33,8 @@ buttons.joinButton = async (interaction) => {
 					description: "Make sure your spotify app is open and play a track to make it active!" }], ephemeral: true };
 				interaction.followUp(message);
 			}
+		} finally {
+			spotifyApi.resetAccessToken();
 		}
 	}
 	else
@@ -58,6 +60,8 @@ buttons.playButton = async (interaction) => {
 				methods.validateResponse(await spotifyApi.play());
 		} catch (error) {
 			console.log(error);
+		} finally {
+			spotifyApi.resetAccessToken();
 		}
 	}
 }
@@ -73,6 +77,8 @@ buttons.previousButton = async (interaction) => {
 			methods.validateResponse(await spotifyApi.skipToPrevious());
 		} catch (error) {
 			console.log(error);
+		} finally {
+			spotifyApi.resetAccessToken();
 		}
 	}
 }
@@ -88,6 +94,8 @@ buttons.nextButton = async (interaction) => {
 			methods.validateResponse(await spotifyApi.skipToNext());
 		} catch (error) {
 			console.log(error);
+		} finally {
+			spotifyApi.resetAccessToken();
 		}
 	}
 }
@@ -106,6 +114,8 @@ buttons.likeButton = async (interaction) => {
 			methods.validateResponse(await spotifyApi.addToMySavedTracks([id]), true);
 	} catch (error) {
 		console.log(error);
+	} finally {
+			spotifyApi.resetAccessToken();
 	}
 }
 
