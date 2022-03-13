@@ -17,15 +17,15 @@ module.exports = {
 		.setName('add')
 		.setDescription('Add a song to the current playlist')
 		.addSubcommand(subcommand =>
-			subcommand.setName('URL')
+			subcommand.setName('url')
 			.setDescription('Add a song through it\'s URL')
 			.addStringOption(option =>
 				option
-				.setName('URL')
+				.setName('url')
 				.setDescription('eg: https://open.spotify.com/track/4RdpSi00jdvfRLZb3Q1WhB')
 				.setRequired(true)))
 		.addSubcommand(subcommand =>
-			subcommand.setName('Search')
+			subcommand.setName('search')
 			.setDescription('Search for a track providing a title and/or artist name')
 			.addStringOption(option =>
 				option
@@ -37,16 +37,17 @@ module.exports = {
 				.setDescription('Song\'s artist'))),
 
 	async execute(interaction) {
+		const command = interaction.options.getSubcommand();
 		if (methods.getIsSearching()) {
 			interaction.reply({
-				embeds: [{description: 'A song is already being added'}],
+				embeds: [{description: 'patience??'}],
 				ephemeral: true
 			});
 			return;
 		}
 		if (!methods.getOnPlaylist()) {
 			interaction.reply({
-				embeds: [{description: 'Create a playlist first'}],
+				embeds: [{description: 'and where do you want me to add this to...'}],
 				ephemeral: true
 			});
 			return;
@@ -54,13 +55,17 @@ module.exports = {
 		methods.getIsSearching(true);
 		const spotifyApi = new SpotifyWebApi();
 		try {
-			const search = interaction.options.getString('search');
-			if (search.includes('open.spotify.com')) {
-				if (!search.includes('track')) {
-					await interaction.reply({ embeds: [{ description: 'invalid URL' }] });
+			if (command == 'url') {
+				const url = interaction.options.getString('url');
+				if (!url.includes('open.spotify.com/track/')) {
+					await interaction.reply({
+						embeds: [{ description: 'maybe learn to copy your links better' }],
+						ephemeral: true,
+					});
+					methods.getIsSearching(false);
 					return;
 				}
-				const id = search.slice(31).split('?')[0];
+				const id = url.slice(31).split('?')[0];
 				try {
 					await interaction.deferReply();
 					const token = await methods.getToken(interaction.user.id);
@@ -81,10 +86,25 @@ module.exports = {
 					console.log("in execute().url", error);
 				}
 			} else {
+				const title = interaction.options.getString('title');
+				const artist = interaction.options.getString('artist');
+				if (!artist && !title) {
+					await interaction.reply({
+						embeds: [{
+							description: 'ahaha, dumbass'
+						}],
+						ephemeral: true,
+					});
+					methods.getIsSearching(false);
+					return;
+				}
 				try {
 					await interaction.deferReply();
 					methods.getSearchIndex(0);
-					const data = await methods.getSearchData(interaction, search);
+					const query = (title ? `track:${title}` : '') + (title && artist ? '+' : '') +
+						(artist ? `artist:${artist}` : '');
+					console.log('QUERY:', query);
+					const data = await methods.getSearchData(interaction, query);
 					const message = methods.searchMessage(interaction, data, false);
 					await interaction.editReply(message);
 					// song will be added through button events

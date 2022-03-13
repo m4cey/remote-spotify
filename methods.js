@@ -630,7 +630,7 @@ async function updateRemote (interaction) {
             syncPlayback(data);
         if (compareState(data))
             refreshRemote(interaction);
-        if (data.length && state.length && (data[0]?.track?.id || data[0]?.context?.uri != state[0]?.context?.uri))
+        if (data.length && state?.length && (data[0]?.track?.id || data[0]?.context?.uri != state[0]?.context?.uri))
             refreshOnce = false;
         // update local state; no manipulating data after this point
         if (data && data.length)
@@ -693,11 +693,7 @@ function getIsSearching (value) {
     if (arguments.length > 0) isSearching = value; return isSearching;
 }
 
-async function getSearchData (interaction, search) {
-    const fields = search.split(',');
-    let query = 'track:' + fields[0];
-    query += fields.length > 0 ? '+artist:' + fields[1] : '';
-    console.log(query);
+async function getSearchData (interaction, query) {
     const options = {
         limit: searchSize,
         offset: searchIndex + searchOffset,
@@ -719,7 +715,7 @@ async function getSearchData (interaction, search) {
             track.cover = track.album?.images?.[0]?.url;
             res.tracks.push(track);
         });
-        res.search = search;
+        res.query = query;
         searchData = res;
         return res;
     } catch (error) {
@@ -778,14 +774,14 @@ async function updateSearch (interaction) {
         if (searchIndex >= searchSize) {
             searchOffset += searchSize;
             searchIndex = 0;
-            data = await getSearchData(interaction, searchData.search);
+            data = await getSearchData(interaction, searchData.query);
         } else if (searchIndex < 0) {
             searchOffset -= searchSize;
             searchIndex = 0;
-            data = await getSearchData(interaction, searchData.search);
+            data = await getSearchData(interaction, searchData.query);
             searchIndex = searchSize - 1;
         } else
-            data = await getSearchData(interaction, searchData.search);
+            data = await getSearchData(interaction, searchData.query);
     }
     const message = searchMessage(interaction, data, false);
     await interaction.editReply(message);
