@@ -23,8 +23,12 @@ let refreshOnInterval;
 let refreshIntervalId;
 let timeoutId;
 let timeoutDelay;
+let searchData;
+let searchTrackId;
 let searchIndex = 0;
-let searchData = [];
+let searchOffset = 0;
+let isSearching = false;
+let searchSize = 5;
 
 function apiError(message, status) {
     this.message = message;
@@ -655,14 +659,18 @@ async function onTrackChange (interaction) {
     await updateRemote(interaction);
 }
 
-function getSearchIndex () { return searchIndex; }
-function setSearchIndex (index) { searchIndex = index; }
+function getSearchIndex (value) {
+    if (arguments.length > 0) searchIndex = value; return searchIndex;
+}
+function getIsSearching (value) {
+    if (arguments.length > 0) isSearching = value; return isSearching;
+}
 
 async function getSearchData (interaction, search) {
     const query = 'track:' + search;
     const options = {
-        limit: 5,
-        offset: searchIndex,
+        limit: searchSize,
+        offset: searchIndex + searchOffset,
     }
     const spotifyApi = new SpotifyWebApi();
     try {
@@ -680,7 +688,8 @@ async function getSearchData (interaction, search) {
             track.cover = track.album?.images?.[0]?.url;
             res.tracks.push(track);
         });
-        console.log(res.tracks[0].name, res.offset, res.total);
+        res.search = search;
+        searchData = res;
         return res;
     } catch (error) {
         console.log("in getSearchData():", error);
@@ -691,11 +700,12 @@ async function getSearchData (interaction, search) {
 
 function searchMessage (interaction, data, once) {
     const track = data.tracks[searchIndex];
+    searchTrackId = track.id;
     const embed = new MessageEmbed()
         .setTitle(`\`\`\`${track.name} by ${track.artists}\`\`\``)
         .setDescription(once ?
         `Added by <@${interaction.user.id}>`
-        :`${searchIndex + 1} of ${data.total}`)
+        :`${searchIndex + searchOffset + 1} of ${data.total}`)
         .setThumbnail(track.cover)
 
     const controls = new MessageActionRow()
@@ -704,12 +714,12 @@ function searchMessage (interaction, data, once) {
             .setCustomId('previousSearch')
             .setLabel("⬅️")
             .setStyle('SECONDARY')
-            .setDisabled(!searchIndex),
+            .setDisabled(!searchIndex && !searchOffset),
             new MessageButton()
             .setCustomId('nextSearch')
             .setLabel("➡️")
             .setStyle('SECONDARY')
-            .setDisabled(searchIndex == data.total),
+            .setDisabled(searchIndex + searchOffset == data.total),
             new MessageButton()
             .setCustomId('confirmSearch')
             .setLabel("🙋")
@@ -718,17 +728,38 @@ function searchMessage (interaction, data, once) {
             .setCustomId('cancelSearch')
             .setLabel("🙅")
             .setStyle('SECONDARY'));
-    let message = { embeds: [ embed ] };
+    let message = { embeds: [ embed ], components: [] };
     if (!once)
         message.components = [ controls ];
     return message;
 }
 
-async function updateSearch (interaction, search) {
-    await interaction.deferReply();
-    searchIndex = 0;
-    const data = await getSearchData(interaction, search);
+async function updateSearch (interaction) {
+    let data;
+    if (searchIndex < 0 && searchOffset == 0)
+        searchIndex = 0;
+    if (0 <= searchIndex && searchIndex < searchSize)
+        data = searchData;
+    else {
+        if (searchIndex >= searchSize) {
+            searchOffset += searchSize;
+            searchIndex = 0;
+            data = await getSearchData(interaction, searchData.search);
+        } else if (searchIndex < 0) {
+            searchOffset -= searchSize;
+            searchIndex = 0;
+            data = await getSearchData(interaction, searchData.search);
+            searchIndex = searchSize - 1;
+        } else
+            data = await getSearchData(interaction, searchData.search);
+    }
     const message = searchMessage(interaction, data, false);
+    await interaction.editReply(message);
+}
+
+async function addSearchedSong (interaction) {
+    console.log(searchTrackId);
+    const message = searchMessage(interaction, searchData, true);
     await interaction.editReply(message);
 }
 
@@ -778,7 +809,8 @@ module.exports = {
     remoteMessage,
     getSearchData,
     getSearchIndex,
-    setSearchIndex,
+    getIsSearching,
     searchMessage,
     updateSearch,
+    addSearchedSong,
 };

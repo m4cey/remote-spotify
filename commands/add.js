@@ -21,6 +21,14 @@ module.exports = {
 		.setDescription('URL or search by name')
 		.setRequired(true)),
 	async execute(interaction) {
+		if (methods.getIsSearching()) {
+			interaction.reply({
+				embeds: [{description: 'A song is already being added'}],
+				ephemeral: true
+			});
+			return;
+		}
+		methods.getIsSearching(true);
 		const spotifyApi = new SpotifyWebApi();
 		try {
 			const search = interaction.options.getString('search');
@@ -36,13 +44,14 @@ module.exports = {
 					await spotifyApi.setAccessToken(token);
 					let track = await spotifyApi.getTrack(id);
 					methods.validateResponse(track, true);
-					methods.setSearchIndex(0);
+					methods.getSearchIndex(0);
 					track = track.body;
 					track.artists = track.artists.map(obj => obj.name).join();
 					track.cover = track.album?.images?.[0]?.url;
 					const data = { tracks: [track], offset: 0, total: 1 };
 					const message = methods.searchMessage(interaction, data, true);
 					await interaction.editReply(message);
+					methods.getIsSearching(false);
 					// actually add the song here
 				} catch (error) {
 					console.log("in execute().url", error);
@@ -50,7 +59,7 @@ module.exports = {
 			} else {
 				try {
 					await interaction.deferReply();
-					methods.setSearchIndex(0);
+					methods.getSearchIndex(0);
 					const data = await methods.getSearchData(interaction, search);
 					const message = methods.searchMessage(interaction, data, false);
 					await interaction.editReply(message);

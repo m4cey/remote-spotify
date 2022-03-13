@@ -126,9 +126,25 @@ buttons.refreshButton = async (interaction) => {
 // search menu buttons
 
 buttons.confirmSearchButton = async (interaction) => {
+	methods.getIsSearching(false);
+	methods.addSearchedSong(interaction);
 }
 
 buttons.cancelSearchButton = async (interaction) => {
+	methods.getIsSearching(false);
+	interaction.deleteReply();
+}
+
+buttons.previousSearchButton = async (interaction) => {
+	const index = methods.getSearchIndex() - 1;
+	methods.getSearchIndex(index);
+	await methods.updateSearch(interaction);
+}
+
+buttons.nextSearchButton = async (interaction) => {
+	const index = methods.getSearchIndex() + 1;
+	methods.getSearchIndex(index);
+	await methods.updateSearch(interaction);
 }
 
 module.exports = {
