@@ -127,11 +127,11 @@ buttons.playlistButton = async (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return;
 	const listening = methods.getListening();
 	const spotifyApi = new SpotifyWebApi();
+	let id;
 	for (user of listening) {
 		try {
 			const token = await methods.getToken(user);
 			spotifyApi.setAccessToken(token);
-			let id;
 			const onPlaylist = methods.getOnPlaylist();
 			if (onPlaylist) {
 				const id = methods.getPlaylistId();
