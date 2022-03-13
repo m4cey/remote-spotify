@@ -31,6 +31,7 @@ let searchIndex = 0;
 let searchOffset = 0;
 let isSearching = false;
 let searchSize = 5;
+let skipRefresh;
 
 function apiError(message, status) {
     this.message = message;
@@ -333,7 +334,7 @@ async function remoteMessage (data) {
     data[0].is_playing ??= false;
     data[0].color ??= color;
     let fields = [
-        { name: "Listening:", value: `\`\`\`${users}\`\`\`` }
+        { name: `Listening: ${listening.length || ''}`, value: `\`\`\`${users}\`\`\`` }
     ];
     if (queue)
         fields.push({ name: 'Next up:', value: `\`\`\`${queue}\`\`\`` });
@@ -526,7 +527,11 @@ async function refreshRemote (interaction) {
     }
 
     if (onPlaylist && !state[0].track?.id)
-        return;
+        skipRefresh = true;
+    else
+        skipRefresh = false;
+    if (skipRefresh) return;
+
     message = await remoteMessage(state);
     message ??= oldMessage;
     // followup threshold test
@@ -813,6 +818,18 @@ function addListener (interaction) {
     console.log(listening);
     updateOnInterval = true;
     refreshOnInterval = true;
+    if (onPlaylist) {
+        const spotifyApi = new SpotifyWebApi();
+        try {
+            const token = await getToken(interaction.user.id);
+            spotifyApi.setAccessToken(token);
+            methods.validateResponse(await spotifyApi.followPlaylist(playlistId), true);
+        } catch (error) {
+            console.log('in addListener():', error);
+        } finally {
+            spotifyApi.resetAccessToken();
+        }
+    }
 }
 
 function removeListener (userId) {

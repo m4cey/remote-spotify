@@ -145,22 +145,18 @@ buttons.playlistButton = async (interaction) => {
 				const options = { collaborative: true, public: false };
 				const data = await spotifyApi.createPlaylist(name, options);
 				methods.validateResponse(data, true);
-				methods.validateResponse(await spotifyApi.play({context_uri: data.body.uri}));
-				methods.validateResponse(await spotifyApi.pause());
 				id = data.body.id;
+				methods.getPlaylistId(id);
+				methods.getOnPlaylist(true);
 			} else {
 				methods.validateResponse(await spotifyApi.followPlaylist(id), true);
 			}
+			methods.validateResponse(await spotifyApi.play({context_uri: data.body.uri}));
 		} catch (error) {
 			console.log(error);
 		} finally {
 			spotifyApi.resetAccessToken();
 		}
-	}
-	if (id) {
-		await methods.refreshRemote(interaction);
-		methods.getPlaylistId(id);
-		methods.getOnPlaylist(true);
 	}
 }
 
