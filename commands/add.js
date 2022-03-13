@@ -28,6 +28,13 @@ module.exports = {
 			});
 			return;
 		}
+		if (!methods.getOnPlaylist()) {
+			interaction.reply({
+				embeds: [{description: 'Create a playlist first'}],
+				ephemeral: true
+			});
+			return;
+		}
 		methods.getIsSearching(true);
 		const spotifyApi = new SpotifyWebApi();
 		try {
