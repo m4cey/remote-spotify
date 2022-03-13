@@ -4,6 +4,7 @@ const SpotifyWebApi = require('spotify-web-api-node');
 const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
 const StormDB = require("stormdb");
 const { Engine } = require('./database.js');
+const { getColorFromURL } = require('color-thief-node');
 
 const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
@@ -291,6 +292,18 @@ function formatQueue(data) {
     return queue;
 }
 
+function rgbToHex (r, g, b) {
+    return [r, g, b].map( x => {
+        const hex = x.toString(16).split('.')[0];
+        return hex.length === 1 ? '0' + hex : hex;
+    }).join('');
+}
+
+function randomHex () {
+    const rgb = [1, 1, 1].map( x => Math.random() * 255 );
+    return rgbToHex(...rgb);
+}
+
 async function remoteMessage (data) {
     const users = formatNameList(data);
     const userCount = data ? data.length : 0;
@@ -301,13 +314,15 @@ async function remoteMessage (data) {
         data = [{}];
         const list = ['HELP!', 'PLEASE', 'GETMEOUTOFHERE', 'JUSTKEEPURCOOKIES',
             'SHEHURTSME', 'IWANTOUT', 'CALLCPS', 'HELPME', 'AAAAAAAAAAAAAAAAAAAAAAAAA'];
+        const color = randomHex();
         data[0] = {
             title: 'nothing',
             artists: 'nobody',
-            cover: `https://via.placeholder.com/600/000000/FFFFFF/?text=${
+            cover: `https://via.placeholder.com/600/${color}/FFFFFF/?text=${
                 list[Math.random() * list.length | 0]}!`
         };
         data[0].is_playing = false;
+        data[0].color = color;
     }
     let fields = [
         { name: "Listening:", value: `\`\`\`${users}\`\`\`` }
@@ -320,7 +335,8 @@ async function remoteMessage (data) {
         .setThumbnail(data[0].cover)
         .setAuthor(context)
         .setURL(data[0].track?.url || '')
-        .addFields(fields);
+        .addFields(fields)
+        .setColor('#' + data[0].color);
     const partyRow = new MessageActionRow()
         .addComponents(
             new MessageButton()
@@ -568,9 +584,13 @@ async function updateRemote (interaction) {
         if (state?.[0]?.track?.id != data[0]?.track.id) {
             data[0].queue = await getQueue(data[0], 10);
             queue = data[0].queue;
-        }
-        if (data[0] && !data[0].queue)
+            //other things on track change
+            data[0].color = rgbToHex(...(await getColorFromURL(data[0].cover)));
+        } else if (data[0]) {
+            // restore data that wasn't computed from state
             data[0].queue = queue;
+            data[0].color = state[0].color;
+        }
 
         console.log('LISTENING:\n', data.map(user => {
             return {
