@@ -120,7 +120,7 @@ buttons.likeButton = async (interaction) => {
 }
 
 buttons.refreshButton = async (interaction) => {
-	methods.refreshRemote(interaction);
+	methods.getRefreshOnce(false);
 }
 
 buttons.playlistButton = async (interaction) => {
@@ -128,6 +128,7 @@ buttons.playlistButton = async (interaction) => {
 	const listening = methods.getListening();
 	const spotifyApi = new SpotifyWebApi();
 	let id;
+	let uri;
 	for (user of listening) {
 		try {
 			const token = await methods.getToken(user);
@@ -138,6 +139,7 @@ buttons.playlistButton = async (interaction) => {
 				methods.validateResponse(await spotifyApi.unfollowPlaylist(id), true);
 				methods.getOnPlaylist(false);
 				methods.getPlaylistId(null);
+				methods.getRefreshOnce(false);
 				continue;
 			}
 			if (user == listening[0]) {
@@ -146,12 +148,14 @@ buttons.playlistButton = async (interaction) => {
 				const data = await spotifyApi.createPlaylist(name, options);
 				methods.validateResponse(data, true);
 				id = data.body.id;
+				uri = data.body.uri;
 				methods.getPlaylistId(id);
 				methods.getOnPlaylist(true);
+				methods.getRefreshOnce(false);
 			} else {
 				methods.validateResponse(await spotifyApi.followPlaylist(id), true);
 			}
-			methods.validateResponse(await spotifyApi.play({context_uri: data.body.uri}));
+			methods.validateResponse(await spotifyApi.play({context_uri: uri}));
 		} catch (error) {
 			console.log(error);
 		} finally {

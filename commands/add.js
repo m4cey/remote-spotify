@@ -14,12 +14,28 @@ function failed (interaction) {
 
 module.exports = {
 	data: new SlashCommandBuilder()
-	.setName('add')
-	.setDescription('add track to queue')
-	.addStringOption(option =>
-		option.setName('search')
-		.setDescription('URL or search by name')
-		.setRequired(true)),
+		.setName('add')
+		.setDescription('Add a song to the current playlist')
+		.addSubcommand(subcommand =>
+			subcommand.setName('URL')
+			.setDescription('Add a song through it\'s URL')
+			.addStringOption(option =>
+				option
+				.setName('URL')
+				.setDescription('eg: https://open.spotify.com/track/4RdpSi00jdvfRLZb3Q1WhB')
+				.setRequired(true)))
+		.addSubcommand(subcommand =>
+			subcommand.setName('Search')
+			.setDescription('Search for a track providing a title and/or artist name')
+			.addStringOption(option =>
+				option
+				.setName('title')
+				.setDescription('Song\'s title'))
+			.addStringOption(option =>
+				option
+				.setName('artist')
+				.setDescription('Song\'s artist'))),
+
 	async execute(interaction) {
 		if (methods.getIsSearching()) {
 			interaction.reply({

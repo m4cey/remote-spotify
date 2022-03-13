@@ -31,7 +31,7 @@ let searchIndex = 0;
 let searchOffset = 0;
 let isSearching = false;
 let searchSize = 5;
-let skipRefresh;
+let refreshOnce = false;
 
 function apiError(message, status) {
     this.message = message;
@@ -221,7 +221,6 @@ async function getPlaybackData (userId) {
                 id: id
             }
         }
-        console.log(res);
         return (res);
     } catch (error) {
         console.log('in getPlaybackData(): ', error);
@@ -316,7 +315,8 @@ function randomHex () {
     return rgbToHex(...rgb);
 }
 
-async function remoteMessage (data) {
+async function remoteMessage (state) {
+    let data = state;
     const users = formatNameList(data);
     const userCount = data ? data.length : 0;
     const context = getContextData(data ? data[0] : null);
@@ -389,6 +389,10 @@ async function remoteMessage (data) {
     return { embeds: [embed], components: [playbackRow, partyRow] }
 }
 
+function getRefreshOnce (value) {
+    if (arguments.length > 0) refreshOnce = value; return refreshOnce;
+}
+
 function getOnPlaylist (value) {
     if (arguments.length > 0) onPlaylist = value; return onPlaylist;
 }
@@ -408,7 +412,7 @@ async function syncPlayback(users) {
         const sync_context = db.get('options.sync_context').value();
 
         for (user of users) {
-            if (!user.track.id)
+            if (!leader.track.id)
                 continue;
             syncing[user.userId] ??= false;
             console.log(user.name, syncing[user.userId]);
@@ -526,12 +530,14 @@ async function refreshRemote (interaction) {
         refreshOnInterval = false;
     }
 
-    if (onPlaylist && !state[0].track?.id)
-        skipRefresh = true;
-    else
-        skipRefresh = false;
-    if (skipRefresh) return;
-
+    if (refreshOnce) {
+        console.log('skipping refresh');
+        return;
+    }
+    if (!state?.length || !state[0]?.track?.id) {
+        console.log('next refresh will be skipped');
+        refreshOnce = true;
+    }
     message = await remoteMessage(state);
     message ??= oldMessage;
     // followup threshold test
@@ -568,11 +574,11 @@ async function refreshRemote (interaction) {
 }
 
 function compareState(data) {
-    if (!state || state.length != data.length
-        || state[0].track?.id != data[0].track?.id) return true;
+    if (!data || !state || state.length != data.length
+        || state[0]?.track?.id != data[0]?.track?.id) return true;
     for (let i = 0; i < data.length; i++) {
-        let changed = state[i].is_playing != data[i].is_playing;
-        changed ||= state[i].is_saved != data[i].is_saved;
+        let changed = state[i]?.is_playing != data[i]?.is_playing;
+        changed ||= state[i]?.is_saved != data[i]?.is_saved;
         if (changed) return true;
     }
     return false;
@@ -624,6 +630,8 @@ async function updateRemote (interaction) {
             syncPlayback(data);
         if (compareState(data))
             refreshRemote(interaction);
+        if (data.length && state.length && (data[0]?.track?.id || data[0]?.context?.uri != state[0]?.context?.uri))
+            refreshOnce = false;
         // update local state; no manipulating data after this point
         if (data && data.length)
             state = data;
@@ -686,7 +694,10 @@ function getIsSearching (value) {
 }
 
 async function getSearchData (interaction, search) {
-    const query = 'track:' + search;
+    const fields = search.split(',');
+    let query = 'track:' + fields[0];
+    query += fields.length > 0 ? '+artist:' + fields[1] : '';
+    console.log(query);
     const options = {
         limit: searchSize,
         offset: searchIndex + searchOffset,
@@ -818,12 +829,13 @@ async function addListener (interaction) {
     console.log(listening);
     updateOnInterval = true;
     refreshOnInterval = true;
+    refreshOnce = false;
     if (onPlaylist) {
         const spotifyApi = new SpotifyWebApi();
         try {
             const token = await getToken(interaction.user.id);
             spotifyApi.setAccessToken(token);
-            methods.validateResponse(await spotifyApi.followPlaylist(playlistId), true);
+            validateResponse(await spotifyApi.followPlaylist(playlistId), true);
         } catch (error) {
             console.log('in addListener():', error);
         } finally {
@@ -844,6 +856,7 @@ function removeListener (userId) {
         updateOnInterval = refreshOnInterval = false;
     }
     syncing[userId] = false;
+    refreshOnce = false;
 }
 
 module.exports = {
@@ -870,6 +883,7 @@ module.exports = {
     getIsSearching,
     getOnPlaylist,
     getPlaylistId,
+    getRefreshOnce,
     searchMessage,
     updateSearch,
     addSearchedSong,
