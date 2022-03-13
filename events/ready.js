@@ -28,7 +28,8 @@ module.exports = {
 	name: 'ready',
 	once: true,
 	async execute(client) {
-		if (!process.env.LOCAL) {
+		console.log(process.env.LOCAL);
+		if (process.env.LOCAL != 1) {
 			await retrieveDB();
 			updateDB();
 		}
