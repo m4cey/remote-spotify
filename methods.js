@@ -288,7 +288,7 @@ function formatNameList(data) {
             const duration = dayjs.duration(user.duration).format('m:ss');
             users  += `>${user.name}${suffix}[${progress}/${duration}]\n`;
         } else
-            users += `${user.name}${suffix}\n`;
+            users += `>${user.name}${suffix}\n`;
     }
     return users;
 }
@@ -525,6 +525,8 @@ async function refreshRemote (interaction) {
         refreshOnInterval = false;
     }
 
+    if (onPlaylist && !state[0].track?.id)
+        return;
     message = await remoteMessage(state);
     message ??= oldMessage;
     // followup threshold test

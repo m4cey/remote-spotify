@@ -131,9 +131,10 @@ buttons.playlistButton = async (interaction) => {
 		try {
 			const token = await methods.getToken(user);
 			spotifyApi.setAccessToken(token);
-			let id = methods.getPlaylistId();
+			let id;
 			const onPlaylist = methods.getOnPlaylist();
 			if (onPlaylist) {
+				id = methods.getPlaylistId();
 				methods.validateResponse(await spotifyApi.unfollowPlaylist(id), true);
 				methods.getOnPlaylist(false);
 				methods.getPlaylistId(null);
@@ -147,8 +148,6 @@ buttons.playlistButton = async (interaction) => {
 				methods.validateResponse(await spotifyApi.play({context_uri: data.body.uri}));
 				methods.validateResponse(await spotifyApi.pause());
 				id = data.body.id;
-				methods.getPlaylistId(id);
-				methods.getOnPlaylist(true);
 			} else {
 				methods.validateResponse(await spotifyApi.followPlaylist(id), true);
 			}
@@ -157,6 +156,11 @@ buttons.playlistButton = async (interaction) => {
 		} finally {
 			spotifyApi.resetAccessToken();
 		}
+	}
+	if (id) {
+		methods.refreshRemote(interaction);
+		methods.getPlaylistId(id);
+		methods.getOnPlaylist(true);
 	}
 }
 
