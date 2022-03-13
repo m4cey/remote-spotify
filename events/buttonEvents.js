@@ -123,6 +123,43 @@ buttons.refreshButton = async (interaction) => {
 	methods.refreshRemote(interaction);
 }
 
+buttons.playlistButton = async (interaction) => {
+	if (!methods.isListener(interaction.user.id)) return;
+	const listening = methods.getListening();
+	const spotifyApi = new SpotifyWebApi();
+	for (user of listening) {
+		try {
+			const token = await methods.getToken(user);
+			spotifyApi.setAccessToken(token);
+			let id = methods.getPlaylistId();
+			const onPlaylist = methods.getOnPlaylist();
+			if (onPlaylist) {
+				methods.validateResponse(await spotifyApi.unfollowPlaylist(id), true);
+				methods.getOnPlaylist(false);
+				methods.getPlaylistId(null);
+				continue;
+			}
+			if (user == listening[0]) {
+				const name = 'Remote\'s Queue';
+				const options = { collaborative: true, public: false };
+				const data = await spotifyApi.createPlaylist(name, options);
+				methods.validateResponse(data, true);
+				methods.validateResponse(await spotifyApi.play({context_uri: data.body.uri}));
+				methods.validateResponse(await spotifyApi.pause());
+				id = data.body.id;
+				methods.getPlaylistId(id);
+				methods.getOnPlaylist(true);
+			} else {
+				methods.validateResponse(await spotifyApi.followPlaylist(id), true);
+			}
+		} catch (error) {
+			console.log(error);
+		} finally {
+			spotifyApi.resetAccessToken();
+		}
+	}
+}
+
 // search menu buttons
 
 buttons.confirmSearchButton = async (interaction) => {

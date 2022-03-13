@@ -53,6 +53,7 @@ module.exports = {
 					await interaction.editReply(message);
 					methods.getIsSearching(false);
 					// actually add the song here
+					methods.addToPlaylist(track.uri);
 				} catch (error) {
 					console.log("in execute().url", error);
 				}

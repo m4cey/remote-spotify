@@ -23,6 +23,8 @@ let refreshOnInterval;
 let refreshIntervalId;
 let timeoutId;
 let timeoutDelay;
+let onPlaylist = false;
+let playlistId;
 let searchData;
 let searchTrackId;
 let searchIndex = 0;
@@ -171,15 +173,15 @@ async function getPlaybackData (userId) {
         const data = await spotifyApi.getMyCurrentPlaybackState();
         validateResponse(data, true);
         let res = {
-            artists: data.body.item.artists.map(obj => obj.name).toString(),
-            title: data.body.item.name,
-            cover: data.body.item.album.images[0].url,
+            artists: data.body.item?.artists.map(obj => obj.name).toString(),
+            title: data.body.item?.name,
+            cover: data.body.item?.album.images[0].url,
             track: {
-                id: data.body.item.id,
-                uri: data.body.item.uri,
-                url: `https://open.spotify.com/track/${data.body.item.id}`,
+                id: data.body.item?.id,
+                uri: data.body.item?.uri,
+                url: `https://open.spotify.com/track/${data.body.item?.id}`,
             },
-            duration: data.body.item.duration_ms,
+            duration: data.body.item?.duration_ms,
             progress: data.body.progress_ms,
             context: {
                 type: data.body.context?.type,
@@ -188,19 +190,21 @@ async function getPlaybackData (userId) {
             is_playing: data.body.is_playing,
             userId: userId,
             album: {
-                name: data.body.item.album?.name,
-                type: data.body.item.album?.album_type,
-                id: data.body.item.album?.id,
-                url: data.body.item.album?.external_urls.spotify,
+                name: data.body.item?.album?.name,
+                type: data.body.item?.album?.album_type,
+                id: data.body.item?.album?.id,
+                url: data.body.item?.album?.external_urls.spotify,
             },
             artist: {
-                name: data.body.item.artists?.[0].name,
-                url: data.body.item.artists?.[0].external_urls.spotify,
+                name: data.body.item?.artists?.[0].name,
+                url: data.body.item?.artists?.[0].external_urls.spotify,
             }
         };
-        const saved = await spotifyApi.containsMySavedTracks([res.track.id]);
-        validateResponse(saved, true);
-        res.is_saved = saved.body[0];
+        if (res.track?.id) {
+            const saved = await spotifyApi.containsMySavedTracks([res.track.id]);
+            validateResponse(saved, true);
+            res.is_saved = saved.body[0];
+        }
         if (res.context.type == 'playlist') {
             const id = res.context.uri.split(':')[2];
             const options = {
@@ -216,6 +220,7 @@ async function getPlaybackData (userId) {
                 id: id
             }
         }
+        console.log(res);
         return (res);
     } catch (error) {
         console.log('in getPlaybackData(): ', error);
@@ -260,7 +265,7 @@ function getContextData(data) {
         if (!data.context.type) throw "data.context.type is null";
         if (data.context.type == 'artist') throw "artist context not supported";
         const type = data.context.type;
-        const index = data.queue ? ` (${data.queue.index + 1}/${data.queue.total})` : '';
+        const index = data.queue ? ` (${(data.queue.index + 1) || '0'}/${data.queue.total || '0'})` : '';
         context = {
             name: `${type.replace(/^\w/, c => c.toUpperCase())}: ${data[type].name}${index}`,
             url: data[type].url,
@@ -290,7 +295,7 @@ function formatNameList(data) {
 
 function formatQueue(data) {
     if (!data?.queue) return;
-    const amount = Math.min(4, data.queue.tracks.length);
+    const amount = Math.min(4, data.queue?.tracks?.length || 0);
     let queue = '';
     for (let i = 0; i < amount; i++) {
         queue += `${data.queue.index + 2 + i} - ${data.queue.tracks[i].name}\n`;
@@ -316,20 +321,17 @@ async function remoteMessage (data) {
     const context = getContextData(data ? data[0] : null);
     console.log("CONTEXT:", context);
     const queue = formatQueue(data ? data[0] : null);
-    if (!data || !data[0]) {
-        data = [{}];
-        const list = ['HELP!', 'PLEASE', 'GETMEOUTOFHERE', 'JUSTKEEPURCOOKIES',
-            'SHEHURTSME', 'IWANTOUT', 'CALLCPS', 'HELPME', 'AAAAAAAAAAAAAAAAAAAAAAAAA'];
-        const color = randomHex();
-        data[0] = {
-            title: 'nothing',
-            artists: 'nobody',
-            cover: `https://via.placeholder.com/600/${color}/FFFFFF/?text=${
-                list[Math.random() * list.length | 0]}!`
-        };
-        data[0].is_playing = false;
-        data[0].color = color;
-    }
+    const color = randomHex();
+    const list = ['HELP!', 'PLEASE', 'GETMEOUTOFHERE', 'JUSTKEEPURCOOKIES',
+        'SHEHURTSME', 'IWANTOUT', 'CALLCPS', 'HELPME', 'AAAAAAAAAAAAAAAAAAAAAAAAA'];
+    data ??= [];
+    data[0] ??= {};
+    data[0].title ??= 'nothing';
+    data[0].artists ??= 'nobody';
+    data[0].cover ??= `https://via.placeholder.com/600/${color}/FFFFFF/?text=${
+            list[Math.random() * list.length | 0]}!`
+    data[0].is_playing ??= false;
+    data[0].color ??= color;
     let fields = [
         { name: "Listening:", value: `\`\`\`${users}\`\`\`` }
     ];
@@ -358,18 +360,11 @@ async function remoteMessage (data) {
             .setCustomId('refresh')
             .setLabel('🧍')
             .setStyle('SECONDARY'),
-            /*
             new MessageButton()
             .setCustomId('playlist')
-            .setLabel('➕')
+            .setLabel(onPlaylist ? '✖️' : '➕')
             .setStyle('SECONDARY')
-            .setDisabled(!userCount),
-            new MessageButton()
-            .setCustomId('save')
-            .setLabel('💾')
-            .setStyle('SECONDARY')
-            .setDisabled(true)
-            */
+            .setDisabled(!userCount)
         );
     const playbackRow = new MessageActionRow()
         .addComponents(
@@ -393,6 +388,14 @@ async function remoteMessage (data) {
     return { embeds: [embed], components: [playbackRow, partyRow] }
 }
 
+function getOnPlaylist (value) {
+    if (arguments.length > 0) onPlaylist = value; return onPlaylist;
+}
+
+function getPlaylistId (value) {
+    if (arguments.length > 0) playlistId = value; return playlistId;
+}
+
 async function syncPlayback(users) {
     try {
         if (!users || users.length <= 1)
@@ -404,6 +407,8 @@ async function syncPlayback(users) {
         const sync_context = db.get('options.sync_context').value();
 
         for (user of users) {
+            if (!user.track.id)
+                continue;
             syncing[user.userId] ??= false;
             console.log(user.name, syncing[user.userId]);
             if (user == leader || syncing[user.userId])
@@ -557,7 +562,7 @@ async function refreshRemote (interaction) {
 
 function compareState(data) {
     if (!state || state.length != data.length
-        || state[0].track.id != data[0].track.id) return true;
+        || state[0].track?.id != data[0].track?.id) return true;
     for (let i = 0; i < data.length; i++) {
         let changed = state[i].is_playing != data[i].is_playing;
         changed ||= state[i].is_saved != data[i].is_saved;
@@ -587,15 +592,17 @@ async function updateRemote (interaction) {
             throw "data object is null"
         }
         // update queue only on track change
-        if (state?.[0]?.track?.id != data[0]?.track.id) {
+        if (state?.[0]?.track?.id != data[0]?.track?.id) {
             data[0].queue = await getQueue(data[0], 10);
             queue = data[0].queue;
             //other things on track change
-            data[0].color = rgbToHex(...(await getColorFromURL(data[0].cover)));
+            if (data[0].cover)
+                data[0].color = rgbToHex(...(await getColorFromURL(data[0].cover)));
         } else if (data[0]) {
             // restore data that wasn't computed from state
             data[0].queue = queue;
-            data[0].color = state[0].color;
+            if (state && state[0])
+                data[0].color = state[0].color;
         }
 
         console.log('LISTENING:\n', data.map(user => {
@@ -615,7 +622,7 @@ async function updateRemote (interaction) {
             state = data;
         //timeout to update on estimated track end
         try {
-            if (!data[0]) throw "data object is null"
+            if (!data[0] || !data[0].progress) throw "data object is invalid"
             const delay = data[0].duration - data[0].progress + 3000;
             if (!timeoutId || timeoutDelay > delay) {
                 timeoutDelay = delay;
@@ -662,6 +669,7 @@ async function onTrackChange (interaction) {
 function getSearchIndex (value) {
     if (arguments.length > 0) searchIndex = value; return searchIndex;
 }
+
 function getIsSearching (value) {
     if (arguments.length > 0) isSearching = value; return isSearching;
 }
@@ -678,6 +686,7 @@ async function getSearchData (interaction, search) {
         spotifyApi.setAccessToken(token);
         const data = await spotifyApi.search(query, ['track'], options);
         validateResponse(data, true);
+        if (!data.body.tracks.items.length) throw "no tracks found"
         let res = {
             tracks: [],
             offset: data.body.tracks.offset,
@@ -693,12 +702,15 @@ async function getSearchData (interaction, search) {
         return res;
     } catch (error) {
         console.log("in getSearchData():", error);
+        isSearching = false;
     } finally {
         spotifyApi.resetAccessToken();
     }
 }
 
 function searchMessage (interaction, data, once) {
+    if (!data || !data.tracks.length)
+        return { embeds: [{ description: 'no tracks found' }] };
     const track = data.tracks[searchIndex];
     searchTrackId = track.id;
     const embed = new MessageEmbed()
@@ -757,10 +769,32 @@ async function updateSearch (interaction) {
     await interaction.editReply(message);
 }
 
+async function addToPlaylist(uri) {
+    const spotifyApi = new SpotifyWebApi();
+    try {
+        const token = await getToken(listening[0]);
+        spotifyApi.setAccessToken(token);
+        validateResponse(await spotifyApi.addTracksToPlaylist(playlistId, [uri]));
+    } catch (error) {
+        console.log('In addToPlaylist():', error);
+    } finally {
+        spotifyApi.resetAccessToken();
+    }
+}
+
 async function addSearchedSong (interaction) {
-    console.log(searchTrackId);
-    const message = searchMessage(interaction, searchData, true);
-    await interaction.editReply(message);
+    const uri = searchData.tracks[searchIndex].uri;
+    try {
+        await addToPlaylist(uri);
+        const message = searchMessage(interaction, searchData, true);
+        await interaction.editReply(message);
+    } catch (error) {
+        console.log('in addSearchingSong():', error);
+        interaction.editReply({
+            embeds: [{ description: 'failed to add track' }],
+            components: []
+        });
+    }
 }
 
 function isListener (userId) {
@@ -810,7 +844,10 @@ module.exports = {
     getSearchData,
     getSearchIndex,
     getIsSearching,
+    getOnPlaylist,
+    getPlaylistId,
     searchMessage,
     updateSearch,
     addSearchedSong,
+    addToPlaylist
 };
