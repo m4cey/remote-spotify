@@ -812,7 +812,7 @@ function isListener (userId) {
     return listening.includes(userId);
 }
 
-function addListener (interaction) {
+async function addListener (interaction) {
     console.log('Adding listener ' + interaction.user.tag);
     listening.push(interaction.user.id);
     console.log(listening);
