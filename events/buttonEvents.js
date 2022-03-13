@@ -134,7 +134,7 @@ buttons.playlistButton = async (interaction) => {
 			let id;
 			const onPlaylist = methods.getOnPlaylist();
 			if (onPlaylist) {
-				id = methods.getPlaylistId();
+				const id = methods.getPlaylistId();
 				methods.validateResponse(await spotifyApi.unfollowPlaylist(id), true);
 				methods.getOnPlaylist(false);
 				methods.getPlaylistId(null);
