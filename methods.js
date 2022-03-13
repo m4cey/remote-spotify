@@ -96,7 +96,12 @@ function getListening() {
 }
 
 function getPlayingTrack () {
-    return { id: state[0].track.id, is_playing: state[0].is_playing }
+    return {
+        id: state[0].track.id,
+        is_playing: state[0].is_playing,
+        name: state[0].track.name,
+        artists: state[0].artists,
+    }
 }
 
 function isSaved(userId) {
@@ -883,5 +888,6 @@ module.exports = {
     searchMessage,
     updateSearch,
     addSearchedSong,
-    addToPlaylist
+    addToPlaylist,
+    getPlaybackData
 };
