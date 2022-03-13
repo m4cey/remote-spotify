@@ -123,16 +123,24 @@ buttons.refreshButton = async (interaction) => {
 	methods.refreshRemote(interaction);
 }
 
+// search menu buttons
+
+buttons.confirmSearchButton = async (interaction) => {
+}
+
+buttons.cancelSearchButton = async (interaction) => {
+}
+
 module.exports = {
 	name: 'interactionCreate',
 	async execute(interaction) {
 		if (!interaction.isButton()) return;
 		console.log(`${interaction.user.tag} in #${interaction.channel.name} triggered a button: ${interaction.customId}`);
 		try {
-			const db = new StormDB(Engine);
 			await interaction.deferUpdate();
 			await buttons[interaction.customId + 'Button'](interaction);
-			await methods.remote(interaction);
+			if (!interaction.customId.includes('Search'))
+				await methods.remote(interaction);
 		} catch (error) {
 			console.log(error);
 		}

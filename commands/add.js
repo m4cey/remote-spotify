@@ -5,37 +5,63 @@ const { Engine } = require('../database.js');
 const methods = require('../methods.js');
 const SpotifyWebApi = require('spotify-web-api-node');
 
-async function failed (interaction) {
-		const embed = new MessageEmbed()
-			.setTitle('Remote failed')
-			.setDescription('not feeling like it rn');
-		await interaction.reply({ embeds: [embed] });
+function failed (interaction) {
+	const embed = new MessageEmbed()
+		.setTitle('Remote failed')
+		.setDescription('not feeling like it rn');
+	return ({ embeds: [embed] });
 }
+
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('add')
-		.setDescription('add track to queue')
-		.addStringOption(option =>
-				option.setName('track')
-					.setDescription('spotify track url')
-					.setRequired(true)),
+	.setName('add')
+	.setDescription('add track to queue')
+	.addStringOption(option =>
+		option.setName('search')
+		.setDescription('URL or search by name')
+		.setRequired(true)),
 	async execute(interaction) {
 		const spotifyApi = new SpotifyWebApi();
-		const url = interaction.options.getString('track');
-		if (!url.includes('track')) {
-			await interaction.reply({ embeds: [{ description: 'not a track' }] });
-			return;
-		}
-		const uri = "spotify:track:" + url.slice(31).split('?')[0];
-		console.log(uri);
 		try {
-			const token = await methods.getToken(interaction.user.id);
-			spotifyApi.setAccessToken(token);
-			methods.validateResponse(await spotifyApi.addToQueue(uri));
-			await interaction.reply({ embeds: [{description: 'track has been queued'}] });
+			const search = interaction.options.getString('search');
+			if (search.includes('open.spotify.com')) {
+				if (!search.includes('track')) {
+					await interaction.reply({ embeds: [{ description: 'invalid URL' }] });
+					return;
+				}
+				const id = search.slice(31).split('?')[0];
+				try {
+					await interaction.deferReply();
+					const token = await methods.getToken(interaction.user.id);
+					await spotifyApi.setAccessToken(token);
+					let track = await spotifyApi.getTrack(id);
+					methods.validateResponse(track, true);
+					methods.setSearchIndex(0);
+					track = track.body;
+					track.artists = track.artists.map(obj => obj.name).join();
+					track.cover = track.album?.images?.[0]?.url;
+					const data = { tracks: [track], offset: 0, total: 1 };
+					const message = methods.searchMessage(interaction, data, true);
+					await interaction.editReply(message);
+					// actually add the song here
+				} catch (error) {
+					console.log("in execute().url", error);
+				}
+			} else {
+				try {
+					await interaction.deferReply();
+					methods.setSearchIndex(0);
+					const data = await methods.getSearchData(interaction, search);
+					const message = methods.searchMessage(interaction, data, false);
+					await interaction.editReply(message);
+					// song will be added through button events
+				} catch (error) {
+					console.log("in execute().search", error);
+				}
+			}
 		} catch (error) {
-			console.log("in execute():", error);
-			await failed(interaction);
+				console.log("in execute():", error);
+				await interaction.editReply(failed());
 		} finally {
 			spotifyApi.resetAccessToken();
 		}

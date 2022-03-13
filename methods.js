@@ -23,6 +23,8 @@ let refreshOnInterval;
 let refreshIntervalId;
 let timeoutId;
 let timeoutDelay;
+let searchIndex = 0;
+let searchData = [];
 
 function apiError(message, status) {
     this.message = message;
@@ -653,6 +655,83 @@ async function onTrackChange (interaction) {
     await updateRemote(interaction);
 }
 
+function getSearchIndex () { return searchIndex; }
+function setSearchIndex (index) { searchIndex = index; }
+
+async function getSearchData (interaction, search) {
+    const query = 'track:' + search;
+    const options = {
+        limit: 5,
+        offset: searchIndex,
+    }
+    const spotifyApi = new SpotifyWebApi();
+    try {
+        const token = await getToken(interaction.user.id);
+        spotifyApi.setAccessToken(token);
+        const data = await spotifyApi.search(query, ['track'], options);
+        validateResponse(data, true);
+        let res = {
+            tracks: [],
+            offset: data.body.tracks.offset,
+            total: data.body.tracks.total
+        };
+        data.body.tracks.items.forEach(track => {
+            track.artists = track.artists.map(obj => obj.name).join();
+            track.cover = track.album?.images?.[0]?.url;
+            res.tracks.push(track);
+        });
+        console.log(res.tracks[0].name, res.offset, res.total);
+        return res;
+    } catch (error) {
+        console.log("in getSearchData():", error);
+    } finally {
+        spotifyApi.resetAccessToken();
+    }
+}
+
+function searchMessage (interaction, data, once) {
+    const track = data.tracks[searchIndex];
+    const embed = new MessageEmbed()
+        .setTitle(`\`\`\`${track.name} by ${track.artists}\`\`\``)
+        .setDescription(once ?
+        `Added by <@${interaction.user.id}>`
+        :`${searchIndex + 1} of ${data.total}`)
+        .setThumbnail(track.cover)
+
+    const controls = new MessageActionRow()
+        .addComponents(
+            new MessageButton()
+            .setCustomId('previousSearch')
+            .setLabel("⬅️")
+            .setStyle('SECONDARY')
+            .setDisabled(!searchIndex),
+            new MessageButton()
+            .setCustomId('nextSearch')
+            .setLabel("➡️")
+            .setStyle('SECONDARY')
+            .setDisabled(searchIndex == data.total),
+            new MessageButton()
+            .setCustomId('confirmSearch')
+            .setLabel("🙋")
+            .setStyle('SECONDARY'),
+            new MessageButton()
+            .setCustomId('cancelSearch')
+            .setLabel("🙅")
+            .setStyle('SECONDARY'));
+    let message = { embeds: [ embed ] };
+    if (!once)
+        message.components = [ controls ];
+    return message;
+}
+
+async function updateSearch (interaction, search) {
+    await interaction.deferReply();
+    searchIndex = 0;
+    const data = await getSearchData(interaction, search);
+    const message = searchMessage(interaction, data, false);
+    await interaction.editReply(message);
+}
+
 function isListener (userId) {
     return listening.includes(userId);
 }
@@ -696,5 +775,10 @@ module.exports = {
     getUserData,
     remote,
     refreshRemote,
-    remoteMessage
+    remoteMessage,
+    getSearchData,
+    getSearchIndex,
+    setSearchIndex,
+    searchMessage,
+    updateSearch,
 };
