@@ -158,7 +158,7 @@ buttons.playlistButton = async (interaction) => {
 		}
 	}
 	if (id) {
-		methods.refreshRemote(interaction);
+		await methods.refreshRemote(interaction);
 		methods.getPlaylistId(id);
 		methods.getOnPlaylist(true);
 	}
@@ -173,6 +173,8 @@ buttons.confirmSearchButton = async (interaction) => {
 
 buttons.cancelSearchButton = async (interaction) => {
 	methods.getIsSearching(false);
+	methods.getSearchIndex(0);
+	methods.getSearchOffset(0);
 	interaction.deleteReply();
 }
 

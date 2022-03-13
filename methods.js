@@ -668,6 +668,10 @@ async function onTrackChange (interaction) {
     await updateRemote(interaction);
 }
 
+function getSearchOffset (value) {
+    if (arguments.length > 0) searchOffset = value; return searchOffset;
+}
+
 function getSearchIndex (value) {
     if (arguments.length > 0) searchIndex = value; return searchIndex;
 }
@@ -845,6 +849,7 @@ module.exports = {
     remoteMessage,
     getSearchData,
     getSearchIndex,
+    getSearchOffset,
     getIsSearching,
     getOnPlaylist,
     getPlaylistId,
