@@ -38,7 +38,7 @@ module.exports = {
 			'authenticated': {},
 			'options': {
 				'followup': true,
-				'sync_context': true,
+				'sync_context': false,
 				'threshold': 6,
 				'updaterate': 5000,
 				'refreshrate': 5000,

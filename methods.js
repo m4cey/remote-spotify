@@ -13,6 +13,7 @@ dayjs.extend(duration);
 let listening = [];
 let state = [];
 let queue = {};
+let syncing = {};
 let lastMessage;
 let oldMessage;
 let updateOnInterval;
@@ -227,19 +228,18 @@ async function getUsername(interaction, userId) {
 }
 
 async function getUserData(interaction) {
-    const spotifyApi = new SpotifyWebApi();
-
     if (!listening.length) return;
     let users = [];
-    for (userId of listening) {
+    for (let i = 0; i < listening.length; i++) {
         try {
-            let data = await getPlaybackData(userId);
+            let data = await getPlaybackData(listening[i]);
             if (!data)
                 throw "data object is null";
-            data.name = await getUsername(interaction, userId);
+            data.name = await getUsername(interaction, listening[i]);
             users.push(data);
+            console.log(i, data.name);
         } catch (error) {
-            console.log('in getUserData().loop:', userId, error);
+            console.log('in getUserData().loop:', listening[i], error);
         }
     }
     return users;
@@ -373,8 +373,8 @@ async function remoteMessage (data) {
 
 async function syncPlayback(users) {
     try {
-        if (!users)
-            throw "data object is null";
+        if (!users || users.length <= 1)
+            throw "data object is invalid";
         const leader = users[0];
         const spotifyApi = new SpotifyWebApi();
         const db = new StormDB(Engine);
@@ -382,7 +382,9 @@ async function syncPlayback(users) {
         const sync_context = db.get('options.sync_context').value();
 
         for (user of users) {
-            if (user == leader || user.skipping)
+            syncing[user.userId] ??= false;
+            console.log(user.name, syncing[user.userId]);
+            if (user == leader || syncing[user.userId])
                 continue;
             const token = await getToken(user.userId);
             await spotifyApi.setAccessToken(token);
@@ -396,28 +398,25 @@ async function syncPlayback(users) {
             if (!unsynced)
                 continue;
             console.log(user.userId, user.name, ">>>>UNSYNCED")
-            let multiUris = false;
+            let multiUris = leader.queue.tracks.length > 1;
+            syncing[user.userId] = true;
             try {
                 if (user.track.id != leader.track.id) {
                     if (sync_context && leader.queue.tracks.length
                         && (user.duration - user.progress) > margin) {
                         const options = { context_uri: leader.context.uri };
                         validateResponse(await spotifyApi.play(options));
-                        user.skipping = leader.queue.index > 0;
                         for (let i = 0; i < leader.queue.index; i++) {
                             console.log("SKIPPING TRACK:",
                                 i+1, '/', leader.queue.index);
                             validateResponse(await spotifyApi.skipToNext());
                         }
-                    } else if (leader.queue.tracks.length > 1)  {
+                    } else if (multiUris)  {
                         const options = {
-                            uris: leader.queue.tracks.map(track =>
-                            'spotify:track:' + track.id),
-                            offset: 0,
-                            position_ms: leader.progress
+                            uris: [leader.track.uri].concat(leader.queue.tracks.map(
+                                track => track.uri))
                         };
                         validateResponse(await spotifyApi.play(options));
-                        multiUris = true;
                     }
                     else {
                         const options = { uris: [leader.track.uri] };
@@ -428,27 +427,34 @@ async function syncPlayback(users) {
                 console.log("in syncPlayback().loop.play()", error.status);
             }
             try {
-                if (!multiUris)
-                    validateResponse(await spotifyApi.seek(leader.progress
-                        + leader.is_playing * 1000));
+                validateResponse(await spotifyApi.seek(leader.progress
+                    + leader.is_playing * 1000));
             } catch (error) {
                 console.log("in syncPlayback().loop.seek()", error.status);
             }
             try {
                 if (!leader.is_playing)
                     validateResponse(await spotifyApi.pause());
+                else
+                    validateResponse(await spotifyApi.play());
             } catch (error) {
                 console.log("in syncPlayback().loop.pause()", error.status);
             }
             try {
-                if (!sync_context && !multiUris)
+                if (!sync_context && !multiUris) {
+                    console.log('adding to queue');
                     validateResponse(
                         await spotifyApi.addToQueue(leader.queue.tracks[0].uri)
                     );
+                }
             } catch (error) {
                 console.log("in syncPlayback().loop.queue()", error.status);
+            } finally {
+                console.log("syncing done");
+                //disable syncing for user for a timeout to avoid conflicts
+                setTimeout(user => { syncing[user.userId] = false }, 5000, user);
+                spotifyApi.resetAccessToken();
             }
-            spotifyApi.resetAccessToken();
         }
     } catch (error) {
         console.log('In syncPlayback():', error);
@@ -574,20 +580,13 @@ async function updateRemote (interaction) {
             }
         }));
 
-        if (data.length > 1) {
-            for (let i = 1; i < data.length; i++) {
-                data[i].skipping = state?.[i]?.skipping || false;
-            }
+        if (data.length > 1)
             syncPlayback(data);
-            for (let i = 1; i < data.length; i++) {
-                data[i].skipping =
-                    (data[i].track.id == data[0].track.id) ? false : data[i].skipping;
-            }
-        }
         if (compareState(data))
             refreshRemote(interaction);
         // update local state; no manipulating data after this point
-        state = data;
+        if (data && data.length)
+            state = data;
         //timeout to update on estimated track end
         try {
             if (!data[0]) throw "data object is null"
@@ -657,6 +656,7 @@ function removeListener (userId) {
         updateIntervalId = refreshIntervalId = 0;
         updateOnInterval = refreshOnInterval = false;
     }
+    syncing[userId] = false;
 }
 
 module.exports = {
