@@ -1,23 +1,16 @@
-const wait = require('node:timers/promises').setTimeout;
 const SpotifyWebApi = require('spotify-web-api-node');
-const StormDB = require("stormdb");
 const methods = require('../methods.js');
-const { Engine } = require('../database.js');
-const db = new StormDB(Engine);
 
 let buttons = {};
 
 buttons.joinButton = async (interaction) => {
-	const db = new StormDB(Engine);
-	if (methods.isListener(interaction.user.id)) {
-		const message = { embeds: [{title: "you're already in the party",
-			description: "wake up!" }], ephemeral: true };
+	const userId = interaction.user.id
+	if (methods.isListener(userId)) {
+		const message = methods.newMessage("you're already in the party", "wake up", true);
 		interaction.followUp(message);
 		return;
 	}
-	const userIds = Object.keys(db.get('authenticated').value());
-	const userId = interaction.user.id;
-	if (userIds.includes(userId)) {
+	if (methods.isAuthenticated(userId)) {
 		console.log('USERID: ', userId);
 		const spotifyApi = new SpotifyWebApi();
 		try {
@@ -25,12 +18,11 @@ buttons.joinButton = async (interaction) => {
 			await spotifyApi.setAccessToken(token);
 			const data = await spotifyApi.getMyCurrentPlaybackState();
 			methods.validateResponse(data, true);
-			methods.addListener(interaction);
+			await methods.addListener(interaction);
 		} catch (error) {
 			console.log('in JoinButton():', error);
 			if (error.status == 204) {
-				const message = { embeds: [{ title: "Device is inactive",
-					description: "Make sure your spotify app is open and play a track to make it active!" }], ephemeral: true };
+				const message = methods.inactiveMessage();
 				interaction.followUp(message);
 			}
 		} finally {
@@ -126,42 +118,65 @@ buttons.refreshButton = async (interaction) => {
 buttons.playlistButton = async (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return;
 	const listening = methods.getListening();
+	if (interaction.user.id != listening[0]) {
+		await interaction.followUp(methods.newMessage(
+		null, 'Only the leader can create/remove a playlist', true)
+		);
+		return;
+	};
 	const spotifyApi = new SpotifyWebApi();
-	let id;
+	let id = methods.getPlaylistId();
+	const onPlaylist = methods.getOnPlaylist();
 	let uri;
 	for (user of listening) {
 		try {
 			const token = await methods.getToken(user);
 			spotifyApi.setAccessToken(token);
-			const onPlaylist = methods.getOnPlaylist();
 			if (onPlaylist) {
-				const id = methods.getPlaylistId();
 				methods.validateResponse(await spotifyApi.unfollowPlaylist(id), true);
+				methods.getPlaylistOwner(null)
 				methods.getOnPlaylist(false);
 				methods.getPlaylistId(null);
-				methods.getRefreshOnce(false);
 				continue;
 			}
 			if (user == listening[0]) {
+				id = null;
 				const name = 'Remote\'s Queue';
 				const options = { collaborative: true, public: false };
 				const data = await spotifyApi.createPlaylist(name, options);
 				methods.validateResponse(data, true);
 				id = data.body.id;
 				uri = data.body.uri;
-				methods.getPlaylistId(id);
+				methods.validateResponse(await spotifyApi.play({context_uri: uri}));
+				methods.getPlaylistOwner(user);
 				methods.getOnPlaylist(true);
+				methods.getPlaylistId(id);
 				methods.getRefreshOnce(false);
-			} else {
+			} else if (methods.getOnPlaylist()) {
 				methods.validateResponse(await spotifyApi.followPlaylist(id), true);
 			}
-			methods.validateResponse(await spotifyApi.play({context_uri: uri}));
 		} catch (error) {
 			console.log(error);
+			if (user == listening[0]) {
+				await interaction.followUp(
+					methods.newMessage(null, 'Failed to create playlist', true)
+				);
+				try {
+				if (id)
+					methods.validateResponse(await spotifyApi.unfollowPlaylist(id), true);
+				} catch (error) {
+					console.log('failed to unfollow playlist', error);
+				}
+				methods.getPlaylistOwner(null)
+				methods.getOnPlaylist(false);
+				methods.getPlaylistId(null);
+				methods.getRefreshOnce(false);
+			}
 		} finally {
 			spotifyApi.resetAccessToken();
 		}
 	}
+	methods.getRefreshOnce(false);
 }
 
 // search menu buttons

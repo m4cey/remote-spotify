@@ -5,51 +5,40 @@ const { Engine } = require('../database.js');
 const methods = require('../methods.js');
 const SpotifyWebApi = require('spotify-web-api-node');
 
-function failed (interaction) {
-	const embed = new MessageEmbed()
-		.setTitle('Remote failed')
-		.setDescription('not feeling like it rn');
-	return ({ embeds: [embed] });
-}
-
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('add')
-		.setDescription('Add a song to the current playlist')
-		.addSubcommand(subcommand =>
-			subcommand.setName('url')
-			.setDescription('Add a song through it\'s URL')
-			.addStringOption(option =>
-				option
-				.setName('url')
-				.setDescription('eg: https://open.spotify.com/track/4RdpSi00jdvfRLZb3Q1WhB')
-				.setRequired(true)))
-		.addSubcommand(subcommand =>
-			subcommand.setName('search')
-			.setDescription('Search for a track providing a title and/or artist name')
-			.addStringOption(option =>
-				option
-				.setName('title')
-				.setDescription('Song\'s title'))
-			.addStringOption(option =>
-				option
-				.setName('artist')
-				.setDescription('Song\'s artist'))),
+	.setName('add')
+	.setDescription('Add a song to the current playlist')
+	.addSubcommand(subcommand =>
+		subcommand.setName('url')
+		.setDescription('Add a song through it\'s URL')
+		.addStringOption(option =>
+			option
+			.setName('url')
+			.setDescription('eg: https://open.spotify.com/track/4RdpSi00jdvfRLZb3Q1WhB')
+			.setRequired(true)))
+	.addSubcommand(subcommand =>
+		subcommand.setName('search')
+		.setDescription('Search for a track providing a title and/or artist name')
+		.addStringOption(option =>
+			option
+			.setName('title')
+			.setDescription('Song\'s title'))
+		.addStringOption(option =>
+			option
+			.setName('artist')
+			.setDescription('Song\'s artist'))),
 
 	async execute(interaction) {
 		const command = interaction.options.getSubcommand();
 		if (methods.getIsSearching()) {
-			interaction.reply({
-				embeds: [{description: 'patience??'}],
-				ephemeral: true
-			});
+			interaction.reply(methods.message(null, 'patience??', true));
 			return;
 		}
 		if (!methods.getOnPlaylist()) {
-			interaction.reply({
-				embeds: [{description: 'and where do you want me to add this to...'}],
-				ephemeral: true
-			});
+			interaction.reply(
+				methods.newMessage(null, 'and where do you want me to add this to...', true)
+			);
 			return;
 		}
 		methods.getIsSearching(true);
@@ -58,11 +47,10 @@ module.exports = {
 			if (command == 'url') {
 				const url = interaction.options.getString('url');
 				if (!url.includes('open.spotify.com/track/')) {
-					await interaction.reply({
-						embeds: [{ description: 'maybe learn to copy your links better' }],
-						ephemeral: true,
-					});
 					methods.getIsSearching(false);
+					await interaction.reply(
+						methods.newMessage(null, 'maybe learn to copy your links better', true)
+					);
 					return;
 				}
 				const id = url.slice(31).split('?')[0];
@@ -89,13 +77,8 @@ module.exports = {
 				const title = interaction.options.getString('title');
 				const artist = interaction.options.getString('artist');
 				if (!artist && !title) {
-					await interaction.reply({
-						embeds: [{
-							description: 'ahaha, dumbass'
-						}],
-						ephemeral: true,
-					});
 					methods.getIsSearching(false);
+					await interaction.reply(methods.newMessage(null, 'ahaha, dumbass', true));
 					return;
 				}
 				try {
@@ -113,8 +96,13 @@ module.exports = {
 				}
 			}
 		} catch (error) {
-				console.log("in execute():", error);
-				await interaction.editReply(failed());
+			console.log("in execute():", error);
+			if (error.status == 204) {
+				const message = methods.inactiveMessage();
+				interaction.followUp(message);
+				return;
+			}
+			await interaction.editReply(methods.failedMessage());
 		} finally {
 			spotifyApi.resetAccessToken();
 		}

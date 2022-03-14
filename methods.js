@@ -25,6 +25,7 @@ let timeoutId;
 let timeoutDelay;
 let onPlaylist = false;
 let playlistId;
+let playlistOwner;
 let searchData;
 let searchTrackId;
 let searchIndex = 0;
@@ -48,6 +49,33 @@ function validateResponse(data, device_error) {
             data.body.error.message,
             data.body.error.status
         );
+}
+
+function newMessage(title, description, ephemeral) {
+    const embed = {};
+    if (title) embed.title = title;
+    if (description) embed.description = description;
+    return { embeds: [embed], ephemeral: ephemeral };
+}
+
+function failedMessage() {
+    return newMessage('Remote failed', 'not feeling like it rn', true);
+}
+
+function blankMessage() {
+    const blank = newMessage(null, '***Remote was here***');
+    blank.components = [];
+    return blank;
+}
+
+function inactiveMessage() {
+    const message = {
+        embeds: [{
+        title: "Device is inactive",
+        description: "Make sure your spotify app is open and play a track to make it active!" }],
+        ephemeral: true
+    };
+    return message;
 }
 
 function postGuide (interaction) {
@@ -124,9 +152,9 @@ async function getQueue(data, limit) {
         let found = false;
         let done = false;
         let tracks;
-        if (data.queue?.index && data.queue?.tracks.length) {
+        if (data.queue?.index && data.queue?.tracks?.length) {
             console.log("SKIPPING SEARCH TO CURRENT INDEX");
-            data.queue.index++;
+            data.queue.index += 1;
             index = data.queue.index;
             found = true;
         }
@@ -402,6 +430,10 @@ function getOnPlaylist (value) {
     if (arguments.length > 0) onPlaylist = value; return onPlaylist;
 }
 
+function getPlaylistOwner (value) {
+    if (arguments.length > 0) playlistOwner = value; return playlistOwner;
+}
+
 function getPlaylistId (value) {
     if (arguments.length > 0) playlistId = value; return playlistId;
 }
@@ -560,9 +592,7 @@ async function refreshRemote (interaction) {
         }
     }
     if (followup) {
-        const blank = { embeds: [{
-            description: '***Remote was here***'
-        }], components: [] };
+        const blank = blankMessage();
         interaction.editReply(blank);
         lastMessage.edit(blank);
         lastMessage = await interaction.followUp(message);
@@ -580,7 +610,8 @@ async function refreshRemote (interaction) {
 
 function compareState(data) {
     if (!data || !state || state.length != data.length
-        || state[0]?.track?.id != data[0]?.track?.id) return true;
+        || state[0]?.track?.id != data[0]?.track?.id
+        || state[0]?.context?.uri != data[0]?.context?.uri) return true;
     for (let i = 0; i < data.length; i++) {
         let changed = state[i]?.is_playing != data[i]?.is_playing;
         changed ||= state[i]?.is_saved != data[i]?.is_saved;
@@ -602,6 +633,7 @@ async function updateRemote (interaction) {
                 clearInterval(updateIntervalId)
             updateOnInterval = false;
         }
+        console.log(onPlaylist, playlistOwner);
 
         lastMessage ??= interaction.message;
         let data = await getUserData(interaction);
@@ -609,10 +641,12 @@ async function updateRemote (interaction) {
             state = null;
             throw "data object is null"
         }
-        // update queue only on track change
         if (state?.[0]?.track?.id != data[0]?.track?.id) {
-            data[0].queue = await getQueue(data[0], 10);
-            queue = data[0].queue;
+            // update queue only on track change
+            if (data[0]) {
+                data[0].queue = await getQueue(data[0], 10);
+                queue = data[0].queue;
+            }
             //other things on track change
             if (data[0].cover)
                 data[0].color = rgbToHex(...(await getColorFromURL(data[0].cover)));
@@ -633,10 +667,10 @@ async function updateRemote (interaction) {
 
         if (data.length > 1)
             syncPlayback(data);
-        if (compareState(data))
-            refreshRemote(interaction);
-        if (data.length && state?.length && (data[0]?.track?.id || data[0]?.context?.uri != state[0]?.context?.uri))
+        if (compareState(data)) {
             refreshOnce = false;
+            refreshRemote(interaction);
+        }
         // update local state; no manipulating data after this point
         if (data && data.length)
             state = data;
@@ -739,8 +773,8 @@ function searchMessage (interaction, data, once) {
     const embed = new MessageEmbed()
         .setTitle(`\`\`\`${track.name} by ${track.artists}\`\`\``)
         .setDescription(once ?
-        `Added by <@${interaction.user.id}>`
-        :`${searchIndex + searchOffset + 1} of ${data.total}`)
+            `Added by <@${interaction.user.id}>`
+            :`${searchIndex + searchOffset + 1} of ${data.total}`)
         .setThumbnail(track.cover)
 
     const controls = new MessageActionRow()
@@ -795,7 +829,7 @@ async function updateSearch (interaction) {
 async function addToPlaylist(uri) {
     const spotifyApi = new SpotifyWebApi();
     try {
-        const token = await getToken(listening[0]);
+        const token = await getToken(playlistOwner);
         spotifyApi.setAccessToken(token);
         validateResponse(await spotifyApi.addTracksToPlaylist(playlistId, [uri]));
     } catch (error) {
@@ -824,6 +858,12 @@ function isListener (userId) {
     return listening.includes(userId);
 }
 
+function isAuthenticated (userId) {
+    const db = new StormDB(Engine);
+    const userIds = Object.keys(db.get('authenticated').value());
+    return userIds.includes(userId);
+}
+
 async function addListener (interaction) {
     console.log('Adding listener ' + interaction.user.tag);
     listening.push(interaction.user.id);
@@ -843,10 +883,16 @@ async function addListener (interaction) {
             spotifyApi.resetAccessToken();
         }
     }
+    if (playlistOwner == interaction.user.id && playlistId) {
+        onPlaylist = true;
+    }
 }
 
 function removeListener (userId) {
     console.log('Removing listener ', userId);
+    if (userId == playlistOwner) {
+        onPlaylist = false;
+    }
     listening = listening.filter(user => user != userId);
     console.log(listening);
     if (!getLeaderId() && (updateIntervalId || refreshIntervalId)) {
@@ -861,6 +907,7 @@ function removeListener (userId) {
 }
 
 module.exports = {
+    isAuthenticated,
     isListener,
     addListener,
     removeListener,
@@ -884,10 +931,15 @@ module.exports = {
     getIsSearching,
     getOnPlaylist,
     getPlaylistId,
+    getPlaylistOwner,
     getRefreshOnce,
     searchMessage,
     updateSearch,
     addSearchedSong,
     addToPlaylist,
-    getPlaybackData
+    getPlaybackData,
+    inactiveMessage,
+    blankMessage,
+    failedMessage,
+    newMessage
 };

@@ -54,10 +54,7 @@ module.exports = {
 			await interaction.editReply({ embeds: [embed] });
 		} catch (error) {
 			console.log(error);
-			const embed = new MessageEmbed()
-				.setTitle('Remote failed')
-				.setDescription('not feeling like it rn');
-			await interaction.reply({ embeds: [embed] });
+			await interaction.reply(methods.failedMessage());
 		}
 	}
 };

@@ -9,6 +9,11 @@ module.exports = {
 		.setName('lyrics')
 		.setDescription('Fetch the current song lyrics from Genius'),
 	async execute(interaction) {
+		if (!methods.isAuthenticated(interaction.user.id)) {
+			const message = methods.inactiveMessage();
+			interaction.reply(message);
+			return;
+		}
 		try {
 			await interaction.deferReply();
 			const data = await methods.getPlaybackData(interaction.user.id);
@@ -21,16 +26,19 @@ module.exports = {
 			}
 			let embed = {};
 			embed.title = data.title + ' by ' + data.artists;
-			embed.description = '```' + await getLyrics(options) + '```';
+			embed.description = '```' +
+				( await getLyrics(options) || "It's empty, like my soul...") + '```';
 			embed.author = { icon_url: data.cover };
 			embed.footer = { text: 'Stolen from Genius.com.' };
 			await interaction.editReply({ embeds: [embed] });
 		} catch (error) {
 			console.log(error);
-			const embed = new MessageEmbed()
-				.setTitle('Remote failed')
-				.setDescription('not feeling like it rn');
-			await interaction.editReply({ embeds: [embed] });
+			if (error.status == 204) {
+				const message = methods.inactiveMessage();
+				interaction.editReply(message);
+				return;
+			}
+			await interaction.editReply(methods.failedMessage());
 		}
 	}
 };
