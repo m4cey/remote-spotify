@@ -899,8 +899,10 @@ function removeListener (userId) {
         onPlaylist = false;
     }
     listening = listening.filter(user => user != userId);
-    if (!listening.length && pingInterval)
+    if (!listening.length && pingInterval) {
         clearInterval(pingInterval);
+        pingInterval = null;
+    }
     console.log(listening);
     if (!getLeaderId() && (updateIntervalId || refreshIntervalId)) {
         console.log("clearing intervals");
