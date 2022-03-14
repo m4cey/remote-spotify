@@ -671,7 +671,7 @@ async function updateRemote (interaction) {
             syncPlayback(data);
         if (compareState(data)) {
             refreshOnce = false;
-            refreshRemote(interaction);
+            //refreshRemote(interaction);
         }
         // update local state; no manipulating data after this point
         if (data && data.length)
