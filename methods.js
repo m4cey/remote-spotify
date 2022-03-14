@@ -5,7 +5,7 @@ const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
 const StormDB = require("stormdb");
 const { Engine } = require('./database.js');
 const { getColorFromURL } = require('color-thief-node');
-const { hsp } = require('heroku-self-ping');
+const hsp = require('heroku-self-ping').default;
 
 const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
@@ -868,7 +868,7 @@ function isAuthenticated (userId) {
 
 async function addListener (interaction) {
     if (!pingInterval && process.env.PING == 1) {
-        pingInterval = hsp(process.env.domain);
+        pingInterval = hsp(process.env.domain, {verbose: true});
     }
     console.log('Adding listener ' + interaction.user.tag);
     listening.push(interaction.user.id);
