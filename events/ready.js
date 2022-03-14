@@ -4,8 +4,6 @@ const StormDB = require('stormdb');
 const { Engine } = require('../database.js');
 const createConnection = require('../sftp.js');
 
-let sftp;
-
 async function retrieveDB () {
 	sftp = await createConnection();
 	console.log('Retrieving stormdb file');

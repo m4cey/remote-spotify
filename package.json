@@ -11,6 +11,7 @@
     "fastify": "^3.27.2",
     "fastify-static": "^4.5.0",
     "genius-lyrics-api": "^3.2.0",
+    "heroku-self-ping": "^2.0.1",
     "spotify-web-api-node": "^5.0.2",
     "ssh2-sftp-client": "^7.2.2",
     "stormdb": "^0.5.2"
