@@ -1,3 +1,4 @@
+const logger = require('./logger.js');
 const fastify = require('fastify')({ logger: false });
 const path = require('path');
 require('dotenv').config();
@@ -16,7 +17,7 @@ const startServer = async () => {
   try {
     await fastify.listen(process.env.PORT, '0.0.0.0')
   } catch (err) {
-    console.log("fastify error")
+    logger.error("fastify error", err)
     fastify.log.error(err)
     process.exit(1)
   }

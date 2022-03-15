@@ -1,3 +1,4 @@
+const logger = require('../logger.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
 const methods = require('../methods.js');
@@ -9,9 +10,9 @@ module.exports = {
 
 	async execute(interaction) {
 		try {
-			console.log(`interaction ${interaction.id} beggining deferral`);
+			logger.debug(`interaction ${interaction.id} beggining deferral`);
 			await interaction.deferReply();
-			console.log(`interaction ${interaction.id} has been deferred`);
+			logger.debug(`interaction ${interaction.id} has been deferred`);
 			const data = await methods.getUserData(interaction);
 			const message = await methods.remoteMessage(data);
 			const lastMessage = methods.getLastMessage();
@@ -19,7 +20,7 @@ module.exports = {
 				lastMessage.edit(methods.blankMessage());
 			methods.setLastMessage(await interaction.editReply(message));
 		} catch (error) {
-			console.log(error);
+			logger.error(error);
 			await interaction.reply(methods.failedMessage());
 		}
 	}

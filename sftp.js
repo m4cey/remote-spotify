@@ -1,3 +1,4 @@
+const logger = require('./logger.js');
 require('dotenv').config();
 let Client = require('ssh2-sftp-client');
 
@@ -12,7 +13,7 @@ async function createConnection () {
     });
     return sftp;
   } catch (error) {
-    console.log(error);
+    logger.error(error);
   }
 }
 

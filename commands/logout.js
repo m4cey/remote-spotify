@@ -1,3 +1,4 @@
+const logger = require('../logger.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { MessageEmbed } = require('discord.js');
 const StormDB = require("stormdb");

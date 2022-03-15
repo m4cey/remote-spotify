@@ -1,3 +1,4 @@
+const logger = require('../logger.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { MessageEmbed } = require('discord.js');
 const StormDB = require("stormdb");
@@ -71,7 +72,7 @@ module.exports = {
 					// actually add the song here
 					methods.addToPlaylist(track.uri);
 				} catch (error) {
-					console.log("in execute().url", error);
+					logger.error(error, "in execute().url");
 				}
 			} else {
 				const title = interaction.options.getString('title');
@@ -86,17 +87,17 @@ module.exports = {
 					methods.getSearchIndex(0);
 					const query = (title ? `track:${title}` : '') + (title && artist ? '+' : '') +
 						(artist ? `artist:${artist}` : '');
-					console.log('QUERY:', query);
+					logger.debug('QUERY:', query);
 					const data = await methods.getSearchData(interaction, query);
 					const message = methods.searchMessage(interaction, data, false);
 					await interaction.editReply(message);
 					// song will be added through button events
 				} catch (error) {
-					console.log("in execute().search", error);
+					logger.error(error, "in execute().search");
 				}
 			}
 		} catch (error) {
-			console.log("in execute():", error);
+			logger.error(error, "in execute():");
 			if (error.status == 204) {
 				const message = methods.inactiveMessage();
 				interaction.followUp(message);

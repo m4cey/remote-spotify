@@ -1,4 +1,5 @@
 require('dotenv').config();
+const logger = require('./logger.js');
 const axios = require('axios').default;
 const SpotifyWebApi = require('spotify-web-api-node');
 const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
@@ -105,7 +106,7 @@ async function getToken (userId) {
         const res = await axios(options);
         return (res.data.accessToken);
     } catch (error) {
-        console.log(error);
+        logger.error(error);
     }
 }
 
@@ -155,14 +156,14 @@ async function getQueue(data, limit) {
         let done = false;
         let tracks;
         if (data.queue?.index && data.queue?.tracks?.length) {
-            console.log("SKIPPING SEARCH TO CURRENT INDEX");
+            logger.debug("SKIPPING SEARCH TO CURRENT INDEX");
             data.queue.index += 1;
             index = data.queue.index;
             found = true;
         }
         do {
             if (found) {
-                console.log('MATCH FOUND', index);
+                logger.debug('MATCH FOUND AT: ' + index);
                 done = found;
             }
             const options = {
@@ -183,7 +184,7 @@ async function getQueue(data, limit) {
                 index = tracks.body.items.findIndex(item =>
                     item.track.id == data.track.id);
                 if (index < 0 && tracks.body.items.length < limit) {
-                    throw "couldn't find original track within the playlist"
+                    throw "couldn't find original track in queue"
                 }
                 found = index >= 0;
                 index = index >= 0 ?
@@ -195,7 +196,7 @@ async function getQueue(data, limit) {
         spotifyApi.resetAccessToken();
         return queue;
     } catch (error) {
-        console.log('in getQueue():', error);
+        logger.warn(error, 'in getQueue():');
         return { index: 0, tracks: [], total: 0 }
     }
 }
@@ -258,7 +259,7 @@ async function getPlaybackData (userId) {
         }
         return (res);
     } catch (error) {
-        console.log('in getPlaybackData(): ', error);
+        logger.error(error, 'in getPlaybackData(): ');
         if (error.status == 204) {
             removeListener(userId);
         }
@@ -284,9 +285,9 @@ async function getUserData(interaction) {
                 throw "data object is null";
             data.name = await getUsername(interaction, listening[i]);
             users.push(data);
-            console.log(i, data.name);
+            logger.debug(i +'/'+ data.name);
         } catch (error) {
-            console.log('in getUserData().loop:', listening[i], error);
+            logger.error(error, `in getUserData().loop: ${listening[i]}`);
         }
     }
     return users;
@@ -306,7 +307,7 @@ function getContextData(data) {
             url: data[type].url,
         };
     } catch (error) {
-        console.log('In getContextData():', error);
+        logger.warn(error, 'In getContextData():');
     }
     return context;
 }
@@ -355,7 +356,7 @@ async function remoteMessage (state) {
     const users = formatNameList(data);
     const userCount = data ? data.length : 0;
     const context = getContextData(data ? data[0] : null);
-    console.log("CONTEXT:", context);
+    logger.debug("CONTEXT: " + context.name);
     const queue = formatQueue(data ? data[0] : null);
     const color = randomHex();
     const list = ['HELP!', 'PLEASE', 'GETMEOUTOFHERE', 'JUSTKEEPURCOOKIES',
@@ -454,7 +455,7 @@ async function syncPlayback(users) {
             if (!leader.track.id)
                 continue;
             syncing[user.userId] ??= false;
-            console.log(user.name, syncing[user.userId]);
+            logger.debug(`${user.name} is syncing = ${syncing[user.userId]}`);
             if (user == leader || syncing[user.userId])
                 continue;
             const token = await getToken(user.userId);
@@ -468,7 +469,7 @@ async function syncPlayback(users) {
             unsynced ||= user.new;
             if (!unsynced)
                 continue;
-            console.log(user.userId, user.name, ">>>>UNSYNCED")
+            logger.debug(`${user.userId} ${user.name} >>>>UNSYNCED`);
             let multiUris = leader.queue.tracks.length > 1;
             syncing[user.userId] = true;
             try {
@@ -478,8 +479,8 @@ async function syncPlayback(users) {
                         const options = { context_uri: leader.context.uri };
                         validateResponse(await spotifyApi.play(options));
                         for (let i = 0; i < leader.queue.index; i++) {
-                            console.log("SKIPPING TRACK:",
-                                i+1, '/', leader.queue.index);
+                            logger.debug(`SKIPPING TRACK:
+                                ${i+1} / ${leader.queue.index}`);
                             validateResponse(await spotifyApi.skipToNext());
                         }
                     } else if (multiUris)  {
@@ -495,13 +496,13 @@ async function syncPlayback(users) {
                     }
                 }
             } catch (error) {
-                console.log("in syncPlayback().loop.play()", error.status);
+                logger.error(error, "in syncPlayback().loop.play()");
             }
             try {
                 validateResponse(await spotifyApi.seek(leader.progress
                     + leader.is_playing * 1000));
             } catch (error) {
-                console.log("in syncPlayback().loop.seek()", error.status);
+                logger.error(error, "in syncPlayback().loop.seek()");
             }
             try {
                 if (!leader.is_playing)
@@ -509,53 +510,26 @@ async function syncPlayback(users) {
                 else
                     validateResponse(await spotifyApi.play());
             } catch (error) {
-                console.log("in syncPlayback().loop.pause()", error.status);
+                logger.error(error, "in syncPlayback().loop.pause()");
             }
             try {
                 if (!sync_context && !multiUris) {
-                    console.log('adding to queue');
+                    logger.debug('adding to queue');
                     validateResponse(
                         await spotifyApi.addToQueue(leader.queue.tracks[0].uri)
                     );
                 }
             } catch (error) {
-                console.log("in syncPlayback().loop.queue()", error.status);
+                logger.error(error, "in syncPlayback().loop.queue()");
             } finally {
-                console.log("syncing done");
+                logger.debug("syncing done");
                 //disable syncing for user for a timeout to avoid conflicts
                 setTimeout(user => { syncing[user.userId] = false }, 5000, user);
                 spotifyApi.resetAccessToken();
             }
         }
     } catch (error) {
-        console.log('In syncPlayback():', error);
-    }
-}
-async function updateQueue(users) {
-    console.log(">>>updateQueue()");
-    try {
-        if (!users)
-            throw "users object is null";
-        const leader = users[0];
-        const spotifyApi = new SpotifyWebApi();
-
-        for (user of users) {
-            try {
-                if (user == leader)
-                    continue;
-                const token = await getToken(user.userId);
-                await spotifyApi.setAccessToken(token);
-                validateResponse(
-                    await spotifyApi.addToQueue(leader.queue.tracks[0].uri)
-                );
-            } catch (error) {
-                console.log('In updateQueue().loop:', error, 'user:', userId);
-            } finally {
-                spotifyApi.resetAccessToken();
-            }
-        }
-    } catch (error) {
-        console.log('In updateQueue():', error);
+        logger.error(error, 'In syncPlayback():');
     }
 }
 
@@ -570,11 +544,11 @@ async function refreshRemote (interaction) {
     }
 
     if (refreshOnce) {
-        console.log('skipping refresh');
+        logger.debug('skipping refresh');
         return;
     }
     if (!state?.length || !state[0]?.track?.id) {
-        console.log('next refresh will be skipped');
+        logger.debug('next refresh will be skipped');
         refreshOnce = true;
     }
     message = await remoteMessage(state);
@@ -606,7 +580,7 @@ async function refreshRemote (interaction) {
                 lastMessage = await interaction.message.edit(message);
             }
         } else
-            console.log("skipping message refresh, identical");
+            logger.debug("skipping message refresh, identical");
     }
 }
 
@@ -635,7 +609,7 @@ async function updateRemote (interaction) {
                 clearInterval(updateIntervalId)
             updateOnInterval = false;
         }
-        console.log(onPlaylist, playlistOwner);
+        logger.debug(`playlist?= ${onPlaylist}, owner= ${playlistOwner}`);
 
         lastMessage ??= interaction.message;
         let data = await getUserData(interaction);
@@ -659,13 +633,7 @@ async function updateRemote (interaction) {
                 data[0].color = state[0].color;
         }
 
-        console.log('LISTENING:\n', data.map(user => {
-            return {
-                id: user.userId,
-                is_playing: user.is_playing,
-                name: user.name,
-            }
-        }));
+        logger.debug('LISTENING:\n' + data.map(user => `[${user.name}|${user.userId}]`).toString('\n'));
 
         if (data.length > 1)
             syncPlayback(data);
@@ -687,10 +655,10 @@ async function updateRemote (interaction) {
                 timeoutId = setTimeout(onTrackChange, delay, interaction);
             }
         } catch (error) {
-            console.log('in updateRemote().timeout', error);
+            logger.warn(error, 'in updateRemote().timeout');
         }
     } catch (error) {
-        console.error('In updateRemote(): ', error);
+        logger.warn(error, 'In updateRemote():');
     }
 }
 
@@ -702,7 +670,7 @@ async function remote (interaction) {
         if (updateIntervalId)
             clearInterval(updateIntervalId)
         const delay = db.get('options.updaterate').value();
-        console.log(`setting an update interval of ${delay} milliseconds`);
+        logger.debug(`setting an update interval of ${delay} milliseconds`);
         updateIntervalId = setInterval(updateRemote, delay, interaction);
     }
     refreshRemote(interaction);
@@ -710,13 +678,13 @@ async function remote (interaction) {
         if (refreshIntervalId)
             clearInterval(refreshIntervalId)
         const delay = db.get('options.refreshrate').value();
-        console.log(`setting a refresh interval of ${delay} milliseconds`);
+        logger.debug(`setting a refresh interval of ${delay} milliseconds`);
         refreshIntervalId = setInterval(refreshRemote, delay, interaction);
     }
 }
 
 async function onTrackChange (interaction) {
-    console.log("track change update");
+    logger.debug("track change update");
     timeoutId = 0;
     timeoutDelay = 0;
     await updateRemote(interaction);
@@ -760,7 +728,7 @@ async function getSearchData (interaction, query) {
         searchData = res;
         return res;
     } catch (error) {
-        console.log("in getSearchData():", error);
+        logger.error(error, "in getSearchData():");
         isSearching = false;
     } finally {
         spotifyApi.resetAccessToken();
@@ -834,8 +802,9 @@ async function addToPlaylist(uri) {
         const token = await getToken(playlistOwner);
         spotifyApi.setAccessToken(token);
         validateResponse(await spotifyApi.addTracksToPlaylist(playlistId, [uri]));
+        queue = await getQueue(state[0], 10);
     } catch (error) {
-        console.log('In addToPlaylist():', error);
+        logger.error(error, 'In addToPlaylist():');
     } finally {
         spotifyApi.resetAccessToken();
     }
@@ -848,7 +817,7 @@ async function addSearchedSong (interaction) {
         const message = searchMessage(interaction, searchData, true);
         await interaction.editReply(message);
     } catch (error) {
-        console.log('in addSearchingSong():', error);
+        logger.error(error, 'in addSearchingSong():');
         interaction.editReply({
             embeds: [{ description: 'failed to add track' }],
             components: []
@@ -870,9 +839,8 @@ async function addListener (interaction) {
     if (!pingInterval && process.env.PING == 1) {
         pingInterval = hsp(process.env.domain, {verbose: true});
     }
-    console.log('Adding listener ' + interaction.user.tag);
+    logger.debug('Adding listener ' + interaction.user.tag);
     listening.push(interaction.user.id);
-    console.log(listening);
     updateOnInterval = true;
     refreshOnInterval = true;
     refreshOnce = false;
@@ -883,7 +851,7 @@ async function addListener (interaction) {
             spotifyApi.setAccessToken(token);
             validateResponse(await spotifyApi.followPlaylist(playlistId), true);
         } catch (error) {
-            console.log('in addListener():', error);
+            logger.warn(error, 'in addListener().playlist');
         } finally {
             spotifyApi.resetAccessToken();
         }
@@ -894,7 +862,7 @@ async function addListener (interaction) {
 }
 
 function removeListener (userId) {
-    console.log('Removing listener ', userId);
+    logger.debug('Removing listener ' + userId);
     if (userId == playlistOwner) {
         onPlaylist = false;
     }
@@ -903,9 +871,8 @@ function removeListener (userId) {
         clearInterval(pingInterval);
         pingInterval = null;
     }
-    console.log(listening);
     if (!getLeaderId() && (updateIntervalId || refreshIntervalId)) {
-        console.log("clearing intervals");
+        logger.debug("clearing intervals");
         clearInterval(updateIntervalId);
         clearInterval(refreshIntervalId);
         updateIntervalId = refreshIntervalId = 0;

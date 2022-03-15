@@ -1,4 +1,5 @@
 const SpotifyWebApi = require('spotify-web-api-node');
+const logger = require('../logger.js');
 const methods = require('../methods.js');
 
 let buttons = {};
@@ -11,7 +12,7 @@ buttons.joinButton = async (interaction) => {
 		return;
 	}
 	if (methods.isAuthenticated(userId)) {
-		console.log('USERID: ', userId);
+		logger.debug('USERID: ', userId);
 		const spotifyApi = new SpotifyWebApi();
 		try {
 			const token = await methods.getToken(userId);
@@ -20,7 +21,7 @@ buttons.joinButton = async (interaction) => {
 			methods.validateResponse(data, true);
 			await methods.addListener(interaction);
 		} catch (error) {
-			console.log('in JoinButton():', error);
+			logger.error(error, 'in JoinButton():');
 			if (error.status == 204) {
 				const message = methods.inactiveMessage();
 				interaction.followUp(message);
@@ -51,7 +52,7 @@ buttons.playButton = async (interaction) => {
 			else
 				methods.validateResponse(await spotifyApi.play());
 		} catch (error) {
-			console.log(error);
+			logger.error(error);
 		} finally {
 			spotifyApi.resetAccessToken();
 		}
@@ -68,7 +69,7 @@ buttons.previousButton = async (interaction) => {
 			spotifyApi.setAccessToken(token);
 			methods.validateResponse(await spotifyApi.skipToPrevious());
 		} catch (error) {
-			console.log(error);
+			logger.error(error);
 		} finally {
 			spotifyApi.resetAccessToken();
 		}
@@ -85,7 +86,7 @@ buttons.nextButton = async (interaction) => {
 			spotifyApi.setAccessToken(token);
 			methods.validateResponse(await spotifyApi.skipToNext());
 		} catch (error) {
-			console.log(error);
+			logger.error(error);
 		} finally {
 			spotifyApi.resetAccessToken();
 		}
@@ -105,7 +106,7 @@ buttons.likeButton = async (interaction) => {
 		else
 			methods.validateResponse(await spotifyApi.addToMySavedTracks([id]), true);
 	} catch (error) {
-		console.log(error);
+		logger.error(error);
 	} finally {
 			spotifyApi.resetAccessToken();
 	}
@@ -156,7 +157,7 @@ buttons.playlistButton = async (interaction) => {
 				methods.validateResponse(await spotifyApi.followPlaylist(id), true);
 			}
 		} catch (error) {
-			console.log(error);
+			logger.error(error);
 			if (user == listening[0]) {
 				await interaction.followUp(
 					methods.newMessage(null, 'Failed to create playlist', true)
@@ -165,7 +166,7 @@ buttons.playlistButton = async (interaction) => {
 				if (id)
 					methods.validateResponse(await spotifyApi.unfollowPlaylist(id), true);
 				} catch (error) {
-					console.log('failed to unfollow playlist', error);
+					logger.warn(error, 'failed to unfollow playlist');
 				}
 				methods.getPlaylistOwner(null)
 				methods.getOnPlaylist(false);
@@ -209,14 +210,14 @@ module.exports = {
 	name: 'interactionCreate',
 	async execute(interaction) {
 		if (!interaction.isButton()) return;
-		console.log(`${interaction.user.tag} in #${interaction.channel.name} triggered a button: ${interaction.customId}`);
+		logger.debug(`${interaction.user.tag} in #${interaction.channel.name} triggered a button: ${interaction.customId}`);
 		try {
 			await interaction.deferUpdate();
 			await buttons[interaction.customId + 'Button'](interaction);
 			if (!interaction.customId.includes('Search'))
 				await methods.remote(interaction);
 		} catch (error) {
-			console.log(error);
+			logger.error(error);
 		}
 	},
 };

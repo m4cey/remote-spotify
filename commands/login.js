@@ -1,3 +1,4 @@
+const logger = require('../logger.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { MessageEmbed } = require('discord.js');
 const StormDB = require("stormdb");
@@ -14,23 +15,23 @@ module.exports = {
 					.setRequired(true)),
 	async execute(interaction) {
 		try {
-			console.log(`interaction ${interaction.id} beggining deferral`);
+			logger.debug(`interaction ${interaction.id} beggining deferral`);
 			await interaction.deferReply();
-			console.log(`interaction ${interaction.id} has been deferred`);
+			logger.debug(`interaction ${interaction.id} has been deferred`);
 			const db = new StormDB(Engine);
 			const cookie = `sp_dc=${interaction.options.getString('cookie')};`;
-			console.log(cookie);
+			logger.debug(cookie);
 			let success = false;
 			if (cookie) {
 				const oldCookie = db.get('authenticated').get(interaction.user.id).value();
 				db.get('authenticated').get(interaction.user.id).set(cookie).save();
 				try {
 					const token = await methods.getToken(interaction.user.id);
-					console.log("TOKEN: ", token);
+					logger.debug("TOKEN: ", token);
 					if (token && token.length >= 312)
 						success = true
 				} catch (error) {
-					console.log(error);
+					logger.error(error);
 					if (oldCookie)
 						db.get('authenticated').get(interaction.user.id).set(oldCookie);
 					else
@@ -53,7 +54,7 @@ module.exports = {
 
 			await interaction.editReply({ embeds: [embed] });
 		} catch (error) {
-			console.log(error);
+			logger.error(error);
 			await interaction.reply(methods.failedMessage());
 		}
 	}

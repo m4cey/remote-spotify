@@ -1,3 +1,4 @@
+const logger = require('../logger.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { MessageEmbed } = require('discord.js');
 const StormDB = require("stormdb");
@@ -81,7 +82,7 @@ module.exports = {
 			db.get('options').get(option).set(value).save();
 			embed = { description: `${option} = ${value}` }
 		}
-		console.log(db.get('options').value());
+		logger.debug(db.get('options').value());
 		await interaction.reply({ embeds: [embed] });
 	}
 };

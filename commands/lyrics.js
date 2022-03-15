@@ -1,4 +1,5 @@
 require('dotenv').config();
+const logger = require('../logger.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { MessageEmbed } = require('discord.js');
 const { getLyrics } = require('genius-lyrics-api');
@@ -32,7 +33,7 @@ module.exports = {
 			embed.footer = { text: 'Stolen from Genius.com.' };
 			await interaction.editReply({ embeds: [embed] });
 		} catch (error) {
-			console.log(error);
+			logger.error(error);
 			if (error.status == 204) {
 				const message = methods.inactiveMessage();
 				interaction.editReply(message);
