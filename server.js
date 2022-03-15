@@ -31,7 +31,7 @@ fastify.post('/git', function (req, reply) {
       if (err)
         logger.error(err);
     });
-    cmd.run('refresh');
+    cmd.run('sleep 2 && refresh');
   }
   return reply.sendStatus(200);
 });
