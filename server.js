@@ -7,13 +7,14 @@ const path = require('path');
 
 // Declare a route
 fastify.register(require('fastify-static'), {
-    root: path.join(__dirname, './public'),
-    prefix: '/'
+  root: path.join(__dirname, './public'),
+  prefix: '/'
 });
 
-fastify.get('/guide', function (req, reply) {
-    logger.info('guide opened');
-    return reply.sendFile('index.html');
+fastify.get('/', function (req, reply) {
+  logger.info('guide opened');
+  reply.code(200);
+  return reply.sendFile('index.html');
 });
 
 //update glitch with github webhooks
