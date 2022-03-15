@@ -15,6 +15,7 @@ dayjs.extend(duration);
 let listening = [];
 let state = [];
 let queue = {};
+let usernames = {};
 let syncing = {};
 let lastMessage;
 let oldMessage;
@@ -281,7 +282,7 @@ async function getUserData(interaction) {
             let data = await getPlaybackData(listening[i]);
             if (!data)
                 throw "data object is null";
-            data.name = await getUsername(interaction, listening[i]);
+            data.name = usernames[listening[i]];
             users.push(data);
             logger.debug(i +'/'+ data.name);
         } catch (error) {
@@ -836,6 +837,7 @@ function isAuthenticated (userId) {
 async function addListener (interaction) {
     logger.debug('Adding listener ' + interaction.user.tag);
     listening.push(interaction.user.id);
+    usernames[interaction.user.id] = await getUsername(interaction, interaction.user.id);
     updateOnInterval = true;
     refreshOnInterval = true;
     refreshOnce = false;
