@@ -37,28 +37,6 @@ A Genius API application ID, Required for fetching lyrics. Create one at https:/
 
 The access token generated for your Genius application.
 
-`LOCAL:`
-
-If set to 0, the bot will save a snapshot of the database on an SFTP server and update it on every change, as well as fetch the it whenever it is lost. useful for hosting on services like heroku where file changes don't persist.
-
-The following options only apply if `LOCAL=0`:
-
-	`SFTP_HOST:`
-
-	The SFTP server to use.
-
-	`SFTP_USER:`
-
-	The SFTP server's username.
-
-	`SFTP_PORT:`
-
-	The SFTP server's port.
-
-	`SFTP_PASSWORD:`
-
-	The SFTP server's password.
-
 `GIT_SECRET:`
 
 If you chose to fork this repo and host it on glitch.me yourself, you may use this to set up a github webhook to pull changes automatically. Send the post request to https://your-app-name.glitch.me/git
@@ -66,3 +44,25 @@ If you chose to fork this repo and host it on glitch.me yourself, you may use th
 `LOG_LEVEL:`
 
 The log level, possible values are [error, debug, info]
+
+`LOCAL:`
+
+If set to 0, the bot will save a snapshot of the database on an SFTP server and update it on every change, as well as fetch the it whenever it is lost. useful for hosting on services like heroku where file changes don't persist.
+
+The following options only apply if `LOCAL=0`
+
+`SFTP_HOST:`
+
+The SFTP server to use.
+
+`SFTP_USER:`
+
+The SFTP server's username.
+
+`SFTP_PORT:`
+
+The SFTP server's port.
+
+`SFTP_PASSWORD:`
+
+The SFTP server's password.
