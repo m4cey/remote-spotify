@@ -28,7 +28,7 @@ async function pingSelf() {
 	if (process.env.ENV == 'glitch')
     cmd.runSync(`curl ${process.env.DOMAIN}`, (err, data) => {
       if (data)
-        logger.info(data);
+        logger.info('pinged self!);
       if (err)
         logger.error(err);
     });
