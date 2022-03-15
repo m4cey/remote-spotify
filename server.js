@@ -24,6 +24,7 @@ fastify.post('/git', function (req, reply) {
   let sig = `sha1=${hmac.update(JSON.stringify(req.body)).digest('hex')}`;
 
   if (req.headers['x-github-event'] == 'push' && sig === req.headers['x-hub-signature']) {
+    reply.code(200);
     cmd.runSync('chmod 777 ./glitch.sh');
     cmd.runSync('./glitch.sh', (err, data) => {
       if (data)
@@ -33,7 +34,6 @@ fastify.post('/git', function (req, reply) {
     });
     cmd.run('sleep 2; refresh');
   }
-  reply.code(200);
   return reply.send();
 });
 
