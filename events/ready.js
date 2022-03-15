@@ -1,6 +1,7 @@
 require('dotenv').config();
 const logger = require('../logger.js');
 const fs = require('node:fs');
+const cmd = require('node-cmd');
 const StormDB = require('stormdb');
 const { Engine } = require('../database.js');
 const createConnection = require('../sftp.js');
@@ -23,6 +24,11 @@ async function updateDB () {
 	});
 }
 
+async function pingSelf() {
+	if (process.env.ENV == 'glitch')
+		cmd.runSync(`curl ${process.env.DOMAIN}`);
+}
+
 module.exports = {
 	name: 'ready',
 	once: true,
@@ -32,6 +38,7 @@ module.exports = {
 			await retrieveDB();
 			updateDB();
 		}
+		setInterval(pingSelf, 3000);
 		logger.info(`Ready! Logged in as ${client.user.tag}`);
 		const db = new StormDB(Engine);
 		db.default({
