@@ -686,7 +686,7 @@ async function onTrackChange (interaction) {
     logger.debug("track change update");
     timeoutId = 0;
     timeoutDelay = 0;
-    await updateRemote(interaction);
+    await refreshRemote(interaction);
 }
 
 function getSearchOffset (value) {
