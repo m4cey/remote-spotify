@@ -26,7 +26,12 @@ async function updateDB () {
 
 async function pingSelf() {
 	if (process.env.ENV == 'glitch')
-		cmd.runSync(`curl ${process.env.DOMAIN}`);
+    cmd.runSync(`curl ${process.env.DOMAIN}`, (err, data) => {
+      if (data)
+        logger.info(data);
+      if (err)
+        logger.error(err);
+    });
 }
 
 module.exports = {
