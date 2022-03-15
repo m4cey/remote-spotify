@@ -3,8 +3,9 @@ Remote control your Spotify app playback, create playlists, fetch lyrics of your
 
 This bot uses cookies to authenticate to the Spotify Web API so it does not require a premium Spotify account.
 
-**⚠️It uses cookies, you have been warned! use at your own discretion⚠️**
+**⚠️ It uses cookies, you have been warned! use at your own discretion ⚠️**
 
+[Remix on glitch](https://glitch.com/edit/#!/remix/pineapple-brick-amphibian)
 ## Environment variables
 
 To properly host this bot, you must configure the following environment variables first.
