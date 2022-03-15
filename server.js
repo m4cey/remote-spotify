@@ -12,6 +12,7 @@ fastify.register(require('fastify-static'), {
 });
 
 fastify.get('/guide', function (req, reply) {
+    logger.info('guide opened');
     return reply.sendFile('index.html');
 });
 
