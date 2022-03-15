@@ -19,7 +19,7 @@ fastify.get('/guide', function (req, reply) {
 //update glitch with github webhooks
 fastify.post('/git', function (req, reply) {
   logger.info('/git post event');
-  if (process.env.ENV != 'glitch') return;
+  if (!process.env.GIT_SECRET) return;
   let hmac = crypto.createHmac('sha1', process.env.GIT_SECRET);
   let sig = `sha1=${hmac.update(JSON.stringify(req.body)).digest('hex')}`;
 
