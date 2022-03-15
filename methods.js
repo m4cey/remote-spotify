@@ -6,14 +6,12 @@ const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
 const StormDB = require("stormdb");
 const { Engine } = require('./database.js');
 const { getColorFromURL } = require('color-thief-node');
-const hsp = require('heroku-self-ping').default;
 
 const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
 dayjs().format();
 dayjs.extend(duration);
 
-let pingInterval;
 let listening = [];
 let state = [];
 let queue = {};
@@ -836,9 +834,6 @@ function isAuthenticated (userId) {
 }
 
 async function addListener (interaction) {
-    if (!pingInterval && process.env.ENV == 'heroku') {
-        pingInterval = hsp(process.env.domain, {verbose: true});
-    }
     logger.debug('Adding listener ' + interaction.user.tag);
     listening.push(interaction.user.id);
     updateOnInterval = true;
@@ -867,10 +862,6 @@ function removeListener (userId) {
         onPlaylist = false;
     }
     listening = listening.filter(user => user != userId);
-    if (!listening.length && pingInterval) {
-        clearInterval(pingInterval);
-        pingInterval = null;
-    }
     if (!getLeaderId() && (updateIntervalId || refreshIntervalId)) {
         logger.debug("clearing intervals");
         clearInterval(updateIntervalId);
