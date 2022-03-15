@@ -23,7 +23,7 @@ fastify.post('/git', function (req, reply) {
   let sig = `sha1=${hmac.update(JSON.stringify(req.body)).digest('hex')}`;
 
   if (req.headers['x-github-event'] == 'push' && sig === req.headers['x-hub-signature']) {
-    cmd.run('chmod 777 ./git.sh');
+    cmd.run('chmod 777 ./glitch.sh');
     cmd.get('./glitch.sh', (err, data) => {
       if (data)
         logger.info(data);
