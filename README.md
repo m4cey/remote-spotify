@@ -3,7 +3,7 @@ Remote control your Spotify app playback, create playlists, fetch lyrics of your
 
 This bot uses cookies to authenticate to the Spotify Web API so it does not require a premium Spotify account.
 
-**It uses cookies, you have been warned! use at your own discretion**
+**⚠️It uses cookies, you have been warned! use at your own discretion⚠️**
 
 ## Environment variables
 
@@ -39,7 +39,7 @@ The access token generated for your Genius application.
 
 `GIT_SECRET:`
 
-If you chose to fork this repo and host it on glitch.me yourself, you may use this to set up a github webhook to pull changes automatically. Send the post request to https://your-app-name.glitch.me/git
+If you choose to fork this repo and host it on glitch.me yourself, you may use this to set up a github webhook to pull changes automatically. Send the post request to https://your-app-name.glitch.me/git
 
 `LOG_LEVEL:`
 
