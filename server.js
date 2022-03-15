@@ -33,7 +33,8 @@ fastify.post('/git', function (req, reply) {
     });
     cmd.run('sleep 2; refresh');
   }
-  return reply.sendStatus(200);
+  reply.code(200);
+  return reply.send();
 });
 
 const startServer = async () => {
