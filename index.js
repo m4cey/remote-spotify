@@ -27,4 +27,4 @@ for (const file of eventFiles) {
 
 // Login to Discord with your client's token
 startServer();
-client.login(process.env.token);
+client.login(process.env.TOKEN);

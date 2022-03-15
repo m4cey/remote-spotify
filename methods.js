@@ -80,7 +80,7 @@ function inactiveMessage() {
 }
 
 function postGuide (interaction) {
-    const url = `${process.env.domain}`
+    const url = `${process.env.DOMAIN}`
     const embed = new MessageEmbed()
         .setTitle('Authentication required')
         .setDescription("visit the link for an easy guide")

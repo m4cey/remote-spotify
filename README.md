@@ -9,33 +9,33 @@ This bot uses cookies to authenticate to the Spotify Web API so it does not requ
 
 To properly host this bot, you must configure the following environment variables first.
 
-`clientId:`
+`CLIENT_ID:`
 
 Your bot's ID.
 
-`token:`
+`TOKEN:`
 
 The bot's secret access token.
 
-`guildId:`
+`GUILD_ID:`
 
 The ID of the server you want to run this bot on.
 
-`key:`
+`KEY:`
 
 Database encryption key.
 
-`domain:`
+`DOMAIN:`
 
 The domain of your app, eg: https://your-app-name.glitch.me
 
-`genius_id:`
+`PORT:`
 
-A Genius API application ID, Required for fetching lyrics. Create one at https://genius.com/api-clients
+The port to attach the server to, `3000` by default.
 
-`genius_key:`
+`GENIUS_KEY:`
 
-The access token generated for your Genius application.
+A Genius API application access token, Required for fetching lyrics. Create one at https://genius.com/api-clients
 
 `GIT_SECRET:`
 

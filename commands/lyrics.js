@@ -19,7 +19,7 @@ module.exports = {
 			await interaction.deferReply();
 			const data = await methods.getPlaybackData(interaction.user.id);
 			const options = {
-				apiKey: process.env.genius_key,
+				apiKey: process.env.GENIUS_KEY,
 				title: data.title,
 				artist: data.artists.split(',')[0],
 				optimizeQuery: true,

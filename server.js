@@ -39,7 +39,7 @@ fastify.post('/git', function (req, reply) {
 
 const startServer = async () => {
   try {
-    await fastify.listen(process.env.PORT, '0.0.0.0')
+    await fastify.listen(process.env.PORT || 3000, '0.0.0.0')
   } catch (err) {
     logger.error("fastify error", err)
     fastify.log.error(err)
