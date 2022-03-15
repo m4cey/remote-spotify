@@ -1,7 +1,7 @@
 # Remote Spotify
 Remote control your Spotify app playback, create playlists, fetch lyrics of your playing songs, and sync your listenening with friends.
 
-This bot uses cookies to authenticate to the Spitify Web API so it does not require a premium Spotify account.
+This bot uses cookies to authenticate to the Spotify Web API so it does not require a premium Spotify account.
 
 **It uses cookies, you have been warned! use at your own discretion**
 
