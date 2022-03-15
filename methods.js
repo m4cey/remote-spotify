@@ -836,7 +836,7 @@ function isAuthenticated (userId) {
 }
 
 async function addListener (interaction) {
-    if (!pingInterval && process.env.PING == 1) {
+    if (!pingInterval && process.env.ENV == 'heroku') {
         pingInterval = hsp(process.env.domain, {verbose: true});
     }
     logger.debug('Adding listener ' + interaction.user.tag);
