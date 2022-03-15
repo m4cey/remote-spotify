@@ -5,7 +5,7 @@ This bot uses cookies to authenticate to the Spotify Web API so it does not requ
 
 **⚠️ It uses cookies, you have been warned! use at your own discretion ⚠️**
 
-[Remix on glitch](https://glitch.com/edit/#!/remix/pineapple-brick-amphibian)
+[Remix on glitch](https://glitch.com/edit/#!/remix/remote-bot)
 ## Environment variables
 
 To properly host this bot, you must configure the following environment variables first.
