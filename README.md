@@ -3,33 +3,47 @@
 To properly host this bot, you must configure the following environment variables first.
 
 `clientId:`
+
 Your bot's ID
 `token:`
-The bot's secret
+
+he bot's secret
 `guildId:`
-The ID of the server you want to run this bot on
+
+he ID of the server you want to run this bot on
 `key:`
-Database encryption key
+
+atabase encryption key
 `domain:`
-The domain of your app, eg: https://your-app-name.glitch.me
+
+he domain of your app, eg: https://your-app-name.glitch.me
 `genius_id:`
-A Genius API application's key. create one at https://genius.com/api-clients
+
+Genius API application's key. create one at https://genius.com/api-clients
 `genius_key:`
-The access token generated for your Genius application
+
+he access token generated for your Genius application
 `LOCAL:`
-If set to 0, the bot will save a snapshot of the database to an SFTP server and
+
+f set to 0, the bot will save a snapshot of the database to an SFTP server and
 update it on every change. as well as fetch the it whenever it is lost. useful for hosting
 on services like heroku where file changes don't persist.
 `SFTP_HOST:`
-The SFTP server to use, if LOCAL=0.
+
+he SFTP server to use, if LOCAL=0.
 `SFTP_USER:`
-The SFTP server's username.
+
+he SFTP server's username.
 `SFTP_PORT:`
-The SFTP server's port.
+
+he SFTP server's port.
 `SFTP_PASSWORD:`
-The SFTP server's password.
+
+he SFTP server's password.
 `GIT_SECRET:`
-If you chose to fork this repo and host on it glitch.me yourself, you may use
-this to set up a github webhook to pull changes automatically.
+
+If you chose to fork this repo and host it on glitch.me yourself, you may use
+this to set up a github webhook to pull changes automatically. Send the post request to your-app-name.glitch.me/git
+
 `LOG_LEVEL:`
 The log level, possible values are [error, debug, info]
