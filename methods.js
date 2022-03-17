@@ -863,6 +863,7 @@ module.exports = {
     remote,
     refreshRemote,
     remoteMessage,
+    getQueue,
     getSearchData,
     getSearchIndex,
     getSearchOffset,
