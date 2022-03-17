@@ -15,7 +15,6 @@ let syncing = {};
 let lastMessage;
 let updateOnInterval;
 let updateIntervalId;
-let refreshIntervalId;
 let timeoutId;
 let timeoutDelay;
 let onPlaylist = false;
@@ -96,8 +95,10 @@ async function getToken (userId) {
         return (res.data.accessToken);
     } catch (error) {
         logger.error(error);
-        if (!cookie)
+        if (!cookie) {
             removeListener(userId);
+            refreshOnce = false;
+        }
     }
 }
 
