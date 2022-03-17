@@ -10,7 +10,6 @@
     "discord-api-types": "^0.27.3",
     "discord.js": "^13.6.0",
     "dotenv": "^16.0.0",
-    "fastify-static": "^4.5.0",
     "genius-lyrics-api": "^3.2.0",
     "node-cmd": "^5.0.0",
     "pino": "^7.0.0-rc.9",
