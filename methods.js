@@ -18,10 +18,8 @@ let queue = {};
 let usernames = {};
 let syncing = {};
 let lastMessage;
-let oldMessage;
 let updateOnInterval;
 let updateIntervalId;
-let refreshOnInterval;
 let refreshIntervalId;
 let timeoutId;
 let timeoutDelay;
@@ -284,7 +282,7 @@ async function getUserData(interaction) {
                 throw "data object is null";
             data.name = usernames[listening[i]];
             users.push(data);
-            logger.debug(i +'/'+ data.name);
+            logger.debug(i +'='+ data.name);
         } catch (error) {
             logger.error(error, `in getUserData().loop: ${listening[i]}`);
         }
@@ -318,12 +316,7 @@ function formatNameList(data) {
     for (user of data) {
         let suffix = user.is_saved ? '[❤️]' : '';
         suffix += user.is_playing ? '' : '[◼]';
-        if (user.duration) {
-            const progress = dayjs.duration(user.progress).format('m:ss');
-            const duration = dayjs.duration(user.duration).format('m:ss');
-            users  += `>${user.name}${suffix}[${progress}/${duration}]\n`;
-        } else
-            users += `>${user.name}${suffix}\n`;
+        users += `>${user.name}${suffix}\n`;
     }
     return users;
 }
@@ -357,17 +350,16 @@ async function remoteMessage (state) {
     const context = getContextData(data ? data[0] : null);
     logger.debug("CONTEXT: " + context.name);
     const queue = formatQueue(data ? data[0] : null);
-    const color = randomHex();
-    const list = ['HELP!', 'PLEASE', 'GETMEOUTOFHERE', 'JUSTKEEPURCOOKIES',
-        'SHEHURTSME', 'IWANTOUT', 'CALLCPS', 'HELPME', 'AAAAAAAAAAAAAAAAAAAAAAAAA'];
+    const list = ['HELP!', 'PLEASE', 'GETMEOUTOFHERE', 'IWANTOUT', 'CALLCPS', 'HELPME', 'AAAAAAAAAAAAAAAAAAAAAAAAA' ];
+    let color = randomHex();
     data ??= [];
     data[0] ??= {};
     data[0].title ??= 'nothing';
     data[0].artists ??= 'nobody';
+    color = data[0].cover ? rgbToHex(...(await getColorFromURL(data[0].cover))) : color;
     data[0].cover ??= `https://via.placeholder.com/600/${color}/FFFFFF/?text=${
-            list[Math.random() * list.length | 0]}!`
+            list[Math.random() * list.length | 0]}!`;
     data[0].is_playing ??= false;
-    data[0].color ??= color;
     let fields = [
         { name: `Listening: ${listening.length || ''}`, value: `\`\`\`${users}\`\`\`` }
     ];
@@ -380,7 +372,7 @@ async function remoteMessage (state) {
         .setAuthor(context)
         .setURL(data[0].track?.url || '')
         .addFields(fields)
-        .setColor('#' + data[0].color);
+        .setColor('#' + color);
     const partyRow = new MessageActionRow()
         .addComponents(
             new MessageButton()
@@ -536,22 +528,15 @@ async function refreshRemote (interaction) {
     const db = new StormDB(Engine);
     const options = db.get('options').value();
 
-    if (!getLeaderId()) {
-        if (refreshIntervalId)
-            clearInterval(refreshIntervalId)
-        refreshOnInterval = false;
-    }
-
     if (refreshOnce) {
         logger.debug('skipping refresh');
         return;
     }
-    if (!state?.length || !state[0]?.track?.id) {
-        logger.debug('next refresh will be skipped');
-        refreshOnce = true;
-    }
+    refreshOnce = true;
+
+    logger.debug('refreshing remote');
+    lastMessage ??= interaction.message;
     message = await remoteMessage(state);
-    message ??= oldMessage;
     // followup threshold test
     let followup = false;
     if (options.followup) {
@@ -572,14 +557,11 @@ async function refreshRemote (interaction) {
         lastMessage.edit(blank);
         lastMessage = await interaction.followUp(message);
     } else {
-        if (JSON.stringify(oldMessage) != JSON.stringify(message)) {
-            if (lastMessage)
-                await lastMessage.edit(message);
-            else {
-                lastMessage = await interaction.message.edit(message);
-            }
-        } else
-            logger.debug("skipping message refresh, identical");
+        if (lastMessage)
+            await lastMessage.edit(message);
+        else {
+            lastMessage = await interaction.message.edit(message);
+        }
     }
 }
 
@@ -596,7 +578,6 @@ function compareState(data) {
 }
 
 async function updateRemote (interaction) {
-    //TODO  skip late message updates, slow net fix?
     const db = new StormDB(Engine);
     const options = db.get('options').value();
 
@@ -610,8 +591,11 @@ async function updateRemote (interaction) {
         }
         logger.debug(`playlist?= ${onPlaylist}, owner= ${playlistOwner}`);
 
-        lastMessage ??= interaction.message;
         let data = await getUserData(interaction);
+        if (compareState(data)) {
+            logger.debug('State has changed!');
+            refreshOnce = false;
+        }
         if (!data) {
             state = null;
             throw "data object is null"
@@ -622,9 +606,6 @@ async function updateRemote (interaction) {
                 data[0].queue = await getQueue(data[0], 10);
                 queue = data[0].queue;
             }
-            //other things on track change
-            if (data[0].cover)
-                data[0].color = rgbToHex(...(await getColorFromURL(data[0].cover)));
         } else if (data[0]) {
             // restore data that wasn't computed from state
             data[0].queue = queue;
@@ -636,10 +617,6 @@ async function updateRemote (interaction) {
 
         if (data.length > 1)
             syncPlayback(data);
-        if (compareState(data)) {
-            refreshOnce = false;
-            //refreshRemote(interaction);
-        }
         // update local state; no manipulating data after this point
         if (data && data.length)
             state = data;
@@ -658,6 +635,8 @@ async function updateRemote (interaction) {
         }
     } catch (error) {
         logger.warn(error, 'In updateRemote():');
+    } finally {
+        refreshRemote(interaction);
     }
 }
 
@@ -673,19 +652,13 @@ async function remote (interaction) {
         updateIntervalId = setInterval(updateRemote, delay, interaction);
     }
     refreshRemote(interaction);
-    if (refreshOnInterval) {
-        if (refreshIntervalId)
-            clearInterval(refreshIntervalId)
-        const delay = db.get('options.refreshrate').value();
-        logger.debug(`setting a refresh interval of ${delay} milliseconds`);
-        refreshIntervalId = setInterval(refreshRemote, delay, interaction);
-    }
 }
 
 async function onTrackChange (interaction) {
     logger.debug("track change update");
     timeoutId = 0;
     timeoutDelay = 0;
+    refreshOnce = false;
     await refreshRemote(interaction);
 }
 
@@ -806,6 +779,7 @@ async function addToPlaylist(uri) {
         logger.error(error, 'In addToPlaylist():');
     } finally {
         spotifyApi.resetAccessToken();
+        refreshOnce = false;
     }
 }
 
@@ -839,7 +813,6 @@ async function addListener (interaction) {
     listening.push(interaction.user.id);
     usernames[interaction.user.id] = await getUsername(interaction, interaction.user.id);
     updateOnInterval = true;
-    refreshOnInterval = true;
     refreshOnce = false;
     if (onPlaylist) {
         const spotifyApi = new SpotifyWebApi();
@@ -860,16 +833,15 @@ async function addListener (interaction) {
 
 function removeListener (userId) {
     logger.debug('Removing listener ' + userId);
-    if (userId == playlistOwner) {
+    if (userId == playlistOwner)
         onPlaylist = false;
-    }
     listening = listening.filter(user => user != userId);
-    if (!getLeaderId() && (updateIntervalId || refreshIntervalId)) {
-        logger.debug("clearing intervals");
+    logger.debug(listening);
+    if (!getLeaderId() && updateIntervalId) {
+        logger.debug("clearing interval");
         clearInterval(updateIntervalId);
-        clearInterval(refreshIntervalId);
-        updateIntervalId = refreshIntervalId = 0;
-        updateOnInterval = refreshOnInterval = false;
+        updateIntervalId = 0;
+        updateOnInterval = false;
     }
     syncing[userId] = false;
     refreshOnce = false;
