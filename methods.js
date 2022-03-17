@@ -281,6 +281,9 @@ async function getUserData(interaction) {
             if (!data)
                 throw "data object is null";
             data.name = usernames[listening[i]];
+            if (i != 0) {
+                data.is_synced = isSynced(users[0], data);
+            }
             users.push(data);
             logger.debug(i +'='+ data.name);
         } catch (error) {
@@ -314,9 +317,12 @@ function formatNameList(data) {
         return 'no users listening';
     let users = '';
     for (user of data) {
-        let suffix = user.is_saved ? '[❤️]' : '';
-        suffix += user.is_playing ? '' : '[◼]';
-        users += `>${user.name}${suffix}\n`;
+        let suffix = user.is_saved ? '💗' : '';
+        suffix += user.is_playing ? '' : '⏸️';
+        suffix = suffix ? `${suffix}` : '';
+        let prefix = (user == data[0]) ? '👑' : (user.is_synced ? '🌈' : '🤔');
+        prefix = prefix ? `${prefix}` : '';
+        users += `${prefix} ${user.name} ${suffix}\n`;
     }
     return users;
 }
@@ -431,6 +437,19 @@ function getPlaylistId (value) {
     if (arguments.length > 0) playlistId = value; return playlistId;
 }
 
+function isSynced(leader, user) {
+    const db = new StormDB(Engine);
+    const margin = db.get('options.margin').value();
+
+    let unsynced = user.is_playing != leader.is_playing;
+    unsynced ||= (user.track.id == leader.track.id)
+        && (Math.abs(user.progress - leader.progress) > margin);
+    unsynced ||= (user.track.id != leader.track.id)
+        && ((user.duration - user.progress) > margin);
+    unsynced ||= user.new;
+    return !unsynced;
+}
+
 async function syncPlayback(users) {
     try {
         if (!users || users.length <= 1)
@@ -450,14 +469,8 @@ async function syncPlayback(users) {
                 continue;
             const token = await getToken(user.userId);
             await spotifyApi.setAccessToken(token);
-
-            let unsynced = user.is_playing != leader.is_playing;
-            unsynced ||= (user.track.id == leader.track.id)
-                && (Math.abs(user.progress - leader.progress) > margin);
-            unsynced ||= (user.track.id != leader.track.id)
-                && ((user.duration - user.progress) > margin);
-            unsynced ||= user.new;
-            if (!unsynced)
+            const synced = isSynced(leader, user);
+            if (synced)
                 continue;
             logger.debug(`${user.userId} ${user.name} >>>>UNSYNCED`);
             let multiUris = leader.queue.tracks.length > 1;
@@ -571,6 +584,7 @@ function compareState(data) {
     for (let i = 0; i < data.length; i++) {
         let changed = state[i]?.is_playing != data[i]?.is_playing;
         changed ||= state[i]?.is_saved != data[i]?.is_saved;
+        changed ||= state[i]?.is_synced != data[i]?.is_synced;
         if (changed) return true;
     }
     return false;

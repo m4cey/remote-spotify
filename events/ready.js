@@ -41,7 +41,6 @@ module.exports = {
 				'sync_context': false,
 				'threshold': 6,
 				'updaterate': 5000,
-				'refreshrate': 5000,
 				'margin': 10000,
 			}
 		}).save();
