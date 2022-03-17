@@ -1,7 +1,7 @@
 const logger = require('../logger.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { MessageEmbed } = require('discord.js');
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer');
 const StormDB = require("stormdb");
 const { Engine } = require('../database.js');
 const methods = require('../methods.js');
@@ -25,9 +25,7 @@ module.exports = {
 			const email = interaction.options.getString('email');
 			const password = interaction.options.getString('password');
 			// puppeteer
-			const browser = await puppeteer.launch({
-				executablePath: '/snap/bin/chromium'
-			});
+			const browser = await puppeteer.launch();
 			const page = await browser.newPage();
 			await page.goto('https://accounts.spotify.com/login');
 			await page.type('#login-username', email);
