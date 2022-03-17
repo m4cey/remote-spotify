@@ -58,6 +58,7 @@ module.exports = {
 				try {
 					await interaction.deferReply();
 					const token = await methods.getToken(interaction.user.id);
+					if (!token) throw "No token provided"
 					await spotifyApi.setAccessToken(token);
 					let track = await spotifyApi.getTrack(id);
 					methods.validateResponse(track, true);

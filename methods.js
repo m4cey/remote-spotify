@@ -7,11 +7,6 @@ const StormDB = require("stormdb");
 const { Engine } = require('./database.js');
 const { getColorFromURL } = require('color-thief-node');
 
-const dayjs = require('dayjs');
-const duration = require('dayjs/plugin/duration');
-dayjs().format();
-dayjs.extend(duration);
-
 let listening = [];
 let state = [];
 let queue = {};
@@ -71,39 +66,38 @@ function blankMessage() {
 function inactiveMessage() {
     const message = {
         embeds: [{
-        title: "Device is inactive",
-        description: "Make sure your spotify app is open and play a track to make it active!" }],
+            title: "Device is inactive",
+            description: "Make sure your spotify app is open and play a track to make it active!" }],
         ephemeral: true
     };
     return message;
 }
 
 function postGuide (interaction) {
-    const url = `${process.env.DOMAIN}`
-    const embed = new MessageEmbed()
-        .setTitle('Authentication required')
-        .setDescription("visit the link for an easy guide")
-        .setURL(url);
-    interaction.followUp({embeds: [embed], ephemeral: true});
+    const message = newMessage('Authentication Required', 'use `/login` to generate session cookies.', true);
+    interaction.followUp(message);
 }
 
 async function getToken (userId) {
     const db = new StormDB(Engine);
-    const cookie = db.get('authenticated').get(userId).value();
-    const options = {
-        baseURL: 'https://open.spotify.com',
-        url: '/get_access_token?reason=transport&productType=web_player',
-        method: 'GET',
-        headers: {
-            'Cookie': cookie,
-            'User-Agent': 'Mozilla/5.0',
-        }
-    };
+    const cookie = db.get('authenticated').get(userId)?.value();
     try {
+        if (!cookie) throw "Failed to get cookies";
+        const options = {
+            baseURL: 'https://open.spotify.com',
+            url: '/get_access_token?reason=transport&productType=web_player',
+            method: 'GET',
+            headers: {
+                'Cookie': cookie,
+                'User-Agent': 'Mozilla/5.0',
+            }
+        };
         const res = await axios(options);
         return (res.data.accessToken);
     } catch (error) {
         logger.error(error);
+        if (!cookie)
+            removeListener(userId);
     }
 }
 
@@ -147,6 +141,7 @@ async function getQueue(data, limit) {
         if (!data.context) throw 'context object is null'
         if (!data.context.type) throw 'type object is null'
         const token = await getToken(data.userId);
+        if (!token) throw "No token provided"
         spotifyApi.setAccessToken(token);
         let index = 0;
         let found = false;
@@ -203,6 +198,7 @@ async function getPlaybackData (userId) {
 
     try {
         const token = await getToken(userId);
+        if (!token) throw "No token provided"
         spotifyApi.setAccessToken(token);
         const data = await spotifyApi.getMyCurrentPlaybackState();
         validateResponse(data, true);
@@ -468,6 +464,7 @@ async function syncPlayback(users) {
             if (user == leader || syncing[user.userId])
                 continue;
             const token = await getToken(user.userId);
+            if (!token) throw "No token provided"
             await spotifyApi.setAccessToken(token);
             const synced = isSynced(leader, user);
             if (synced)
@@ -597,9 +594,8 @@ async function updateRemote (interaction) {
     try {
         let message;
         //checking API call interval
-        if (!getLeaderId()) {
-            if (updateIntervalId)
-                clearInterval(updateIntervalId)
+        if (!getLeaderId() && updateIntervalId) {
+            clearInterval(updateIntervalId)
             updateOnInterval = false;
         }
         logger.debug(`playlist?= ${onPlaylist}, owner= ${playlistOwner}`);
@@ -693,6 +689,7 @@ async function getSearchData (interaction, query) {
     const spotifyApi = new SpotifyWebApi();
     try {
         const token = await getToken(interaction.user.id);
+        if (!token) throw "No token provided"
         spotifyApi.setAccessToken(token);
         const data = await spotifyApi.search(query, ['track'], options);
         validateResponse(data, true);
@@ -783,6 +780,7 @@ async function addToPlaylist(uri) {
     const spotifyApi = new SpotifyWebApi();
     try {
         const token = await getToken(playlistOwner);
+        if (!token) throw "No token provided"
         spotifyApi.setAccessToken(token);
         validateResponse(await spotifyApi.addTracksToPlaylist(playlistId, [uri]));
         queue = await getQueue(state[0], 10);
@@ -829,6 +827,7 @@ async function addListener (interaction) {
         const spotifyApi = new SpotifyWebApi();
         try {
             const token = await getToken(interaction.user.id);
+            if (!token) throw "No token provided"
             spotifyApi.setAccessToken(token);
             validateResponse(await spotifyApi.followPlaylist(playlistId), true);
         } catch (error) {
@@ -848,12 +847,6 @@ function removeListener (userId) {
         onPlaylist = false;
     listening = listening.filter(user => user != userId);
     logger.debug(listening);
-    if (!getLeaderId() && updateIntervalId) {
-        logger.debug("clearing interval");
-        clearInterval(updateIntervalId);
-        updateIntervalId = 0;
-        updateOnInterval = false;
-    }
     syncing[userId] = false;
     refreshOnce = false;
 }

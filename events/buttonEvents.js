@@ -16,6 +16,7 @@ buttons.joinButton = async (interaction) => {
 		const spotifyApi = new SpotifyWebApi();
 		try {
 			const token = await methods.getToken(userId);
+			if (!token) throw "No token provided"
 			await spotifyApi.setAccessToken(token);
 			const data = await spotifyApi.getMyCurrentPlaybackState();
 			methods.validateResponse(data, true);
@@ -46,6 +47,7 @@ buttons.playButton = async (interaction) => {
 	for (user of listening) {
 		try {
 			const token = await methods.getToken(user);
+			if (!token) throw "No token provided"
 			spotifyApi.setAccessToken(token);
 			if (is_playing)
 				methods.validateResponse(await spotifyApi.pause());
@@ -66,6 +68,7 @@ buttons.previousButton = async (interaction) => {
 	for (user of listening) {
 		try {
 			const token = await methods.getToken(user);
+			if (!token) throw "No token provided"
 			spotifyApi.setAccessToken(token);
 			methods.validateResponse(await spotifyApi.skipToPrevious());
 		} catch (error) {
@@ -83,6 +86,7 @@ buttons.nextButton = async (interaction) => {
 	for (user of listening) {
 		try {
 			const token = await methods.getToken(user);
+			if (!token) throw "No token provided"
 			spotifyApi.setAccessToken(token);
 			methods.validateResponse(await spotifyApi.skipToNext());
 		} catch (error) {
@@ -100,6 +104,7 @@ buttons.likeButton = async (interaction) => {
 	const { id } = methods.getPlayingTrack();
 	try {
 		const token = await methods.getToken(interaction.user.id);
+		if (!token) throw "No token provided"
 		spotifyApi.setAccessToken(token);
 		if (is_saved)
 			methods.validateResponse(await spotifyApi.removeFromMySavedTracks([id]), true);
@@ -108,7 +113,7 @@ buttons.likeButton = async (interaction) => {
 	} catch (error) {
 		logger.error(error);
 	} finally {
-			spotifyApi.resetAccessToken();
+		spotifyApi.resetAccessToken();
 	}
 }
 
@@ -121,7 +126,7 @@ buttons.playlistButton = async (interaction) => {
 	const listening = methods.getListening();
 	if (interaction.user.id != listening[0]) {
 		await interaction.followUp(methods.newMessage(
-		null, 'Only the leader can create/remove a playlist', true)
+			null, 'Only the leader can create/remove a playlist', true)
 		);
 		return;
 	};
@@ -132,6 +137,7 @@ buttons.playlistButton = async (interaction) => {
 	for (user of listening) {
 		try {
 			const token = await methods.getToken(user);
+			if (!token) throw "No token provided"
 			spotifyApi.setAccessToken(token);
 			if (onPlaylist) {
 				methods.validateResponse(await spotifyApi.unfollowPlaylist(id), true);
@@ -163,8 +169,8 @@ buttons.playlistButton = async (interaction) => {
 					methods.newMessage(null, 'Failed to create playlist', true)
 				);
 				try {
-				if (id)
-					methods.validateResponse(await spotifyApi.unfollowPlaylist(id), true);
+					if (id)
+						methods.validateResponse(await spotifyApi.unfollowPlaylist(id), true);
 				} catch (error) {
 					logger.warn(error, 'failed to unfollow playlist');
 				}

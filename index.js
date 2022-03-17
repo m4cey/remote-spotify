@@ -1,6 +1,5 @@
 require('dotenv').config();
 const fs = require('node:fs');
-const { startServer } = require('./server.js');
 const { Client, Collection, Intents, MessageEmbed } = require('discord.js');
 
 // Create a new client instance
@@ -26,5 +25,4 @@ for (const file of eventFiles) {
 }
 
 // Login to Discord with your client's token
-startServer();
 client.login(process.env.TOKEN);
