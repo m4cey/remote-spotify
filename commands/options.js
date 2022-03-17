@@ -41,14 +41,6 @@ module.exports = {
 				.setDescription('a number, not a letter. a NUMBER')
 				.setRequired(true)))
 		.addSubcommand(subcommand =>
-			subcommand.setName('refreshrate')
-			.setDescription('the rate by which to update the embed display')
-			.addNumberOption(option =>
-				option
-				.setName('float')
-				.setDescription('in seconds, eg: 1, 2.5, etc')
-				.setRequired(true)))
-		.addSubcommand(subcommand =>
 			subcommand.setName('margin')
 			.setDescription('the margin of error while syncing')
 			.addNumberOption(option =>
@@ -64,7 +56,6 @@ module.exports = {
 		let value;
 		switch (option) {
 			case 'updaterate':
-			case 'refreshrate':
 			case 'margin':
 				value = 1000 * interaction.options.getNumber('float');
 				break;

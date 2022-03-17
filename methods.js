@@ -343,8 +343,7 @@ function randomHex () {
     return rgbToHex(...rgb);
 }
 
-async function remoteMessage (state) {
-    let data = state;
+async function remoteMessage (data) {
     const users = formatNameList(data);
     const userCount = data ? data.length : 0;
     const context = getContextData(data ? data[0] : null);
@@ -600,12 +599,10 @@ async function updateRemote (interaction) {
             state = null;
             throw "data object is null"
         }
-        if (state?.[0]?.track?.id != data[0]?.track?.id) {
-            // update queue only on track change
-            if (data[0]) {
-                data[0].queue = await getQueue(data[0], 10);
-                queue = data[0].queue;
-            }
+        // update queue only on track change
+        if (data[0] && state?.[0]?.track?.id != data[0]?.track?.id) {
+            data[0].queue = await getQueue(data[0], 10);
+            queue = data[0].queue;
         } else if (data[0]) {
             // restore data that wasn't computed from state
             data[0].queue = queue;

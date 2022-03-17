@@ -14,6 +14,8 @@ module.exports = {
 			await interaction.deferReply();
 			logger.debug(`interaction ${interaction.id} has been deferred`);
 			const data = await methods.getUserData(interaction);
+			if (data?.length)
+      	data[0].queue = await methods.getQueue(data[0], 10);
 			const message = await methods.remoteMessage(data);
 			const lastMessage = methods.getLastMessage();
 			if (lastMessage)
