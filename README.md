@@ -1,11 +1,10 @@
 # Remote Spotify
-Remote control your Spotify app playback, create playlists, fetch lyrics of your playing songs, and sync your listenening with friends.
+Remote control your Spotify app playback, create playlists, fetch lyrics of your playing songs, and sync your listenening with friends all within discord.
 
 This bot uses cookies to authenticate to the Spotify Web API so it does not require a premium Spotify account.
 
 **⚠️ It uses cookies, you have been warned! use at your own discretion ⚠️**
 
-[Remix on glitch](https://glitch.com/edit/#!/remix/remote-bot)
 ## Environment variables
 
 To properly host this bot, you must configure the following environment variables first.
@@ -26,21 +25,13 @@ The ID of the server you want to run this bot on.
 
 Database encryption key.
 
-`DOMAIN:`
+`CHROME:`
 
-The domain of your app, eg: https://your-app-name.glitch.me
-
-`PORT:`
-
-The port to attach the server to, `3000` by default.
+Full path to a chrome/chromium install, needed to run puppeteer for retrieving cookies.
 
 `GENIUS_KEY:`
 
 A Genius API application access token, Required for fetching lyrics. Create one at https://genius.com/api-clients
-
-`GIT_SECRET:`
-
-If you choose to fork this repo and host it on glitch.me yourself, you may use this to set up a github webhook to pull changes automatically. Send the post request to https://your-app-name.glitch.me/git
 
 `LOG_LEVEL:`
 
