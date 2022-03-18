@@ -28,7 +28,7 @@ module.exports = {
 			// puppeteer
 			const browser = await puppeteer.launch({
 				executablePath: process.env.CHROME,
-				args: [ '--no-sandbox', '--disable-setuid-sandbox' ];
+				args: [ '--no-sandbox', '--disable-setuid-sandbox' ],
 			});
 			const page = await browser.newPage();
 			await page.goto('https://accounts.spotify.com/login');
