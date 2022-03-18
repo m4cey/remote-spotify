@@ -1,7 +1,5 @@
 # bot stuffs
-config.json
 db.stormdb
-*.pem
 
 # Logs
 logs
