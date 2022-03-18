@@ -27,7 +27,8 @@ module.exports = {
 			const password = interaction.options.getString('password');
 			// puppeteer
 			const browser = await puppeteer.launch({
-				executablePath: process.env.CHROME
+				executablePath: process.env.CHROME,
+				args: [ '--no-sandbox', '--disable-setuid-sandbox' ];
 			});
 			const page = await browser.newPage();
 			await page.goto('https://accounts.spotify.com/login');
