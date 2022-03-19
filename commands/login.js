@@ -31,6 +31,7 @@ module.exports = {
 				args: [ '--no-sandbox', '--disable-setuid-sandbox' ],
 			});
 			const page = await browser.newPage();
+			await page.setDefaultNavigationTimeout(3 * 60000);
 			await page.goto('https://accounts.spotify.com/login');
 			await page.type('#login-username', email);
 			await page.type('#login-password', password);
@@ -38,8 +39,8 @@ module.exports = {
 			await page.waitForNavigation();
 			const cookies = await page.cookies();
 			let { value, expires } = cookies?.find(crumb => crumb.name == 'sp_dc');
-
 			await browser.close();
+
 			let success = false;
 			if (value) {
 				const oldCookie = db.get('authenticated').get(interaction.user.id).value();
@@ -70,7 +71,7 @@ module.exports = {
 			await interaction.editReply({ embeds: [embed] });
 		} catch (error) {
 			logger.error(error);
-			await interaction.reply(methods.failedMessage());
+			await interaction.editReply(methods.failedMessage());
 		}
 	}
 };
