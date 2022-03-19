@@ -33,7 +33,7 @@ module.exports = {
 	async execute(interaction) {
 		const command = interaction.options.getSubcommand();
 		if (methods.getIsSearching()) {
-			interaction.reply(methods.message(null, 'patience??', true));
+			interaction.reply(methods.newMessage(null, 'patience??', true));
 			return;
 		}
 		if (!methods.getOnPlaylist()) {
