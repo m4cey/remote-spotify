@@ -524,17 +524,21 @@ async function refreshRemote (interaction) {
             }
         }
     }
-    if (followup) {
-        const blank = blankMessage();
-        interaction.editReply(blank);
-        lastMessage.edit(blank);
-        lastMessage = await interaction.followUp(message);
-    } else {
-        if (lastMessage)
-            await lastMessage.edit(message);
-        else {
-            lastMessage = await interaction.message.edit(message);
+    try {
+        if (followup) {
+            const blank = blankMessage();
+            interaction.editReply(blank);
+            lastMessage.edit(blank);
+            lastMessage = await interaction.followUp(message);
+        } else {
+            if (lastMessage)
+                await lastMessage.edit(message);
+            else {
+                lastMessage = await interaction.message.edit(message);
+            }
         }
+    } catch (error) {
+        logger.error(error, 'In refreshRemote()');
     }
 }
 
