@@ -33,9 +33,13 @@ Full path to a chrome/chromium install, needed to run puppeteer for retrieving c
 
 A Genius API application access token, Required for fetching lyrics. Create one at https://genius.com/api-clients
 
+`LOG:`
+
+Log file, if empty stdout is used.
+
 `LOG_LEVEL:`
 
-The log level, possible values are [error, debug, info]
+The log level, possible values are [error, warn, info, debug]
 
 `LOCAL:`
 
