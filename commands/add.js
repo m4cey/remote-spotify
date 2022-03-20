@@ -33,12 +33,12 @@ module.exports = {
 	async execute(interaction) {
 		const command = interaction.options.getSubcommand();
 		if (methods.getIsSearching()) {
-			interaction.reply(methods.newMessage(null, 'patience??', true));
+			interaction.reply(methods.newMessage('A search is already in effect', 'patience??', true));
 			return;
 		}
-		if (!methods.getOnPlaylist()) {
+		if (!methods.getPlaylistOwner()) {
 			interaction.reply(
-				methods.newMessage(null, 'and where do you want me to add this to...', true)
+				methods.newMessage(null, 'Can\'t find the owner of the current playlist', true)
 			);
 			return;
 		}

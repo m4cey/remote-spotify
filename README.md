@@ -39,7 +39,7 @@ The log level, possible values are [error, debug, info]
 
 `LOCAL:`
 
-If set to 0, the bot will save a snapshot of the database on an SFTP server and update it on every change, as well as fetch the it whenever it is lost. useful for hosting on services like heroku where file changes don't persist.
+If set to 0, the bot will save a snapshot of the database on an SFTP server and update it on every change, as well as fetch it whenever it is lost. useful for hosting on services like heroku where file changes don't persist.
 
 The following options only apply if `LOCAL=0`
 

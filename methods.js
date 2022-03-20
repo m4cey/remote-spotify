@@ -11,15 +11,13 @@ let listening = [];
 let state = [];
 let queue = {};
 let usernames = {};
+let accounts = {};
 let syncing = {};
 let lastMessage;
 let updateOnInterval;
 let updateIntervalId;
 let timeoutId;
 let timeoutDelay;
-let onPlaylist = false;
-let playlistId;
-let playlistOwner;
 let searchData;
 let searchTrackId;
 let searchIndex = 0;
@@ -239,7 +237,7 @@ async function getPlaybackData (userId) {
         if (res.context.type == 'playlist') {
             const id = res.context.uri.split(':')[2];
             const options = {
-                fields: 'collaborative,name,public,external_urls'
+                fields: 'collaborative,name,public,external_urls,owner'
             };
             const data = await spotifyApi.getPlaylist(id, options);
             validateResponse(data, true);
@@ -248,7 +246,8 @@ async function getPlaybackData (userId) {
                 public: data.body.public,
                 name: data.body.name,
                 url: data.body.external_urls.spotify,
-                id: id
+                id: id,
+                owner: data.body.owner.id,
             }
         }
         return (res);
@@ -269,6 +268,10 @@ async function getUsername(interaction, userId) {
     }
 }
 
+function getUser(userId) {
+    return state?.find(user => user.userId === userId);
+}
+
 async function getUserData(interaction) {
     if (!listening.length) return;
     let users = [];
@@ -278,11 +281,11 @@ async function getUserData(interaction) {
             if (!data)
                 throw "data object is null";
             data.name = usernames[listening[i]];
-            if (i != 0) {
+            data.accountId = accounts[listening[i]];
+            if (i > 0) {
                 data.is_synced = isSynced(users[0], data);
             }
             users.push(data);
-            logger.debug(i +'='+ data.name);
         } catch (error) {
             logger.error(error, `in getUserData().loop: ${listening[i]}`);
         }
@@ -316,9 +319,8 @@ function formatNameList(data) {
     for (user of data) {
         let suffix = user.is_saved ? '💗' : '';
         suffix += user.is_playing ? '' : '⏸️';
-        suffix = suffix ? `${suffix}` : '';
+        suffix += (getPlaylistOwner() == user.userId) ? '📼' : '';
         let prefix = (user == data[0]) ? '👑' : (user.is_synced ? '🌈' : '🤔');
-        prefix = prefix ? `${prefix}` : '';
         users += `${prefix} ${user.name} ${suffix}\n`;
     }
     return users;
@@ -392,7 +394,7 @@ async function remoteMessage (data) {
             .setStyle('SECONDARY'),
             new MessageButton()
             .setCustomId('playlist')
-            .setLabel(onPlaylist ? '✖️' : '➕')
+            .setLabel('📼')
             .setStyle('SECONDARY')
             .setDisabled(!userCount)
         );
@@ -420,18 +422,6 @@ async function remoteMessage (data) {
 
 function getRefreshOnce (value) {
     if (arguments.length > 0) refreshOnce = value; return refreshOnce;
-}
-
-function getOnPlaylist (value) {
-    if (arguments.length > 0) onPlaylist = value; return onPlaylist;
-}
-
-function getPlaylistOwner (value) {
-    if (arguments.length > 0) playlistOwner = value; return playlistOwner;
-}
-
-function getPlaylistId (value) {
-    if (arguments.length > 0) playlistId = value; return playlistId;
 }
 
 function isSynced(leader, user) {
@@ -599,8 +589,6 @@ async function updateRemote (interaction) {
             clearInterval(updateIntervalId)
             updateOnInterval = false;
         }
-        logger.debug(`playlist?= ${onPlaylist}, owner= ${playlistOwner}`);
-
         let data = await getUserData(interaction);
         if (compareState(data)) {
             logger.debug('State has changed!');
@@ -777,13 +765,20 @@ async function updateSearch (interaction) {
     await interaction.editReply(message);
 }
 
+function getPlaylistOwner () {
+    if (!state?.[0]?.playlist?.owner) return;
+    return state.find(user => user.accountId === state[0].playlist.owner)?.userId;
+}
+
 async function addToPlaylist(uri) {
     const spotifyApi = new SpotifyWebApi();
     try {
-        const token = await getToken(playlistOwner);
+        const userId = getPlaylistOwner();
+        if (!userId) throw "Can't find playlist owner"
+        const token = await getToken(userId);
         if (!token) throw "No token provided"
         spotifyApi.setAccessToken(token);
-        validateResponse(await spotifyApi.addTracksToPlaylist(playlistId, [uri]));
+        validateResponse(await spotifyApi.addTracksToPlaylist(state[0].playlist.id, [uri]));
         queue = await getQueue(state[0], 10);
     } catch (error) {
         logger.error(error, 'In addToPlaylist():');
@@ -824,28 +819,23 @@ async function addListener (interaction) {
     usernames[interaction.user.id] = await getUsername(interaction, interaction.user.id);
     updateOnInterval = true;
     refreshOnce = false;
-    if (onPlaylist) {
-        const spotifyApi = new SpotifyWebApi();
-        try {
-            const token = await getToken(interaction.user.id);
-            if (!token) throw "No token provided"
-            spotifyApi.setAccessToken(token);
-            validateResponse(await spotifyApi.followPlaylist(playlistId), true);
-        } catch (error) {
-            logger.warn(error, 'in addListener().playlist');
-        } finally {
-            spotifyApi.resetAccessToken();
-        }
-    }
-    if (playlistOwner == interaction.user.id && playlistId) {
-        onPlaylist = true;
+    const spotifyApi = new SpotifyWebApi();
+    try {
+        const token = await getToken(interaction.user.id);
+        if (!token) throw "No token provided"
+        spotifyApi.setAccessToken(token);
+        const data = await spotifyApi.getMe();
+        validateResponse(data, true);
+        accounts[interaction.user.id] = data.body.id;
+    } catch (error) {
+        logger.warn(error, 'in addListener().playlist');
+    } finally {
+        spotifyApi.resetAccessToken();
     }
 }
 
 function removeListener (userId) {
     logger.debug('Removing listener ' + userId);
-    if (userId == playlistOwner)
-        onPlaylist = false;
     listening = listening.filter(user => user != userId);
     logger.debug(listening);
     syncing[userId] = false;
@@ -872,18 +862,17 @@ module.exports = {
     refreshRemote,
     remoteMessage,
     getQueue,
+    getUser,
     getSearchData,
     getSearchIndex,
     getSearchOffset,
     getIsSearching,
-    getOnPlaylist,
-    getPlaylistId,
-    getPlaylistOwner,
     getRefreshOnce,
     searchMessage,
     updateSearch,
     addSearchedSong,
     addToPlaylist,
+    getPlaylistOwner,
     getPlaybackData,
     inactiveMessage,
     blankMessage,

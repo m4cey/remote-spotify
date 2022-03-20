@@ -118,48 +118,34 @@ buttons.likeButton = async (interaction) => {
 }
 
 buttons.refreshButton = async (interaction) => {
-	methods.getRefreshOnce(false);
 }
 
 buttons.playlistButton = async (interaction) => {
 	if (!methods.isListener(interaction.user.id)) return;
 	const listening = methods.getListening();
 	if (interaction.user.id != listening[0]) {
-		await interaction.followUp(methods.newMessage(
-			null, 'Only the leader can create/remove a playlist', true)
+		interaction.followUp(
+			methods.newMessage(null, 'Only leader can create playlists', true)
 		);
 		return;
-	};
+	}
 	const spotifyApi = new SpotifyWebApi();
-	let id = methods.getPlaylistId();
-	const onPlaylist = methods.getOnPlaylist();
 	let uri;
+	let id;
 	for (user of listening) {
 		try {
 			const token = await methods.getToken(user);
 			if (!token) throw "No token provided"
 			spotifyApi.setAccessToken(token);
-			if (onPlaylist) {
-				methods.validateResponse(await spotifyApi.unfollowPlaylist(id), true);
-				methods.getPlaylistOwner(null)
-				methods.getOnPlaylist(false);
-				methods.getPlaylistId(null);
-				continue;
-			}
 			if (user == listening[0]) {
-				id = null;
-				const name = 'Remote\'s Queue';
+				const name = `${methods.getUser(user)?.name || 'Remote'}'s Queue`;
 				const options = { collaborative: true, public: false };
 				const data = await spotifyApi.createPlaylist(name, options);
 				methods.validateResponse(data, true);
 				id = data.body.id;
 				uri = data.body.uri;
 				methods.validateResponse(await spotifyApi.play({context_uri: uri}));
-				methods.getPlaylistOwner(user);
-				methods.getOnPlaylist(true);
-				methods.getPlaylistId(id);
-				methods.getRefreshOnce(false);
-			} else if (methods.getOnPlaylist()) {
+			} else {
 				methods.validateResponse(await spotifyApi.followPlaylist(id), true);
 			}
 		} catch (error) {
@@ -174,16 +160,11 @@ buttons.playlistButton = async (interaction) => {
 				} catch (error) {
 					logger.warn(error, 'failed to unfollow playlist');
 				}
-				methods.getPlaylistOwner(null)
-				methods.getOnPlaylist(false);
-				methods.getPlaylistId(null);
-				methods.getRefreshOnce(false);
 			}
 		} finally {
 			spotifyApi.resetAccessToken();
 		}
 	}
-	methods.getRefreshOnce(false);
 }
 
 // search menu buttons
@@ -220,8 +201,10 @@ module.exports = {
 		try {
 			await interaction.deferUpdate();
 			await buttons[interaction.customId + 'Button'](interaction);
-			if (!interaction.customId.includes('Search'))
+			if (!interaction.customId.includes('Search')) {
+				methods.getRefreshOnce(false);
 				await methods.remote(interaction);
+			}
 		} catch (error) {
 			logger.error(error);
 		}
