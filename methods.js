@@ -19,16 +19,17 @@ let updateIntervalId;
 let timeoutId;
 let timeoutDelay;
 let searchData;
-let searchTrackId;
 let searchIndex = 0;
 let searchOffset = 0;
 let isSearching = false;
 let searchSize = 5;
 let refreshOnce = false;
 
-function apiError(message, status) {
-    this.message = message;
-    this.status = status;
+class apiError {
+    constructor (message, status) {
+        this.message = message;
+        this.status = status;
+    }
 }
 
 function validateResponse(data, device_error) {
@@ -274,7 +275,7 @@ function getUser(userId) {
     return state?.find(user => user.userId === userId);
 }
 
-async function getUserData(interaction) {
+async function getUserData() {
     if (!listening.length) return;
     let users = [];
     for (let i = 0; i < listening.length; i++) {
@@ -318,7 +319,7 @@ function formatNameList(data) {
     if (!data || !data.length)
         return 'no users listening';
     let users = '';
-    for (user of data) {
+    for (let user of data) {
         let suffix = user.is_saved ? '💗' : '';
         suffix += user.is_playing ? '' : '⏸️';
         suffix += (getPlaylistOwner() == user.userId) ? '📼' : '';
@@ -346,7 +347,7 @@ function rgbToHex (r, g, b) {
 }
 
 function randomHex () {
-    const rgb = [1, 1, 1].map( x => Math.random() * 255 );
+    const rgb = [1, 1, 1].map( () => Math.random() * 255 );
     return rgbToHex(...rgb);
 }
 
@@ -445,10 +446,8 @@ async function syncPlayback(users) {
             throw "data object is invalid";
         const leader = users[0];
         const spotifyApi = new SpotifyWebApi();
-        const db = new StormDB(Engine);
-        const margin = db.get('options.margin').value();
 
-        for (user of users) {
+        for (let user of users) {
             if (!leader.track.id)
                 continue;
             syncing[user.userId] ??= false;
@@ -457,7 +456,7 @@ async function syncPlayback(users) {
                 continue;
             const token = await getToken(user.userId);
             if (!token) throw "No token provided"
-            await spotifyApi.setAccessToken(token);
+            spotifyApi.setAccessToken(token);
             const synced = isSynced(leader, user);
             if (synced)
                 continue;
@@ -480,9 +479,9 @@ async function syncPlayback(users) {
                 logger.error(error, "in syncPlayback().loop.seek()");
             }
             try {
-                if (!leader.is_playing)
+                if (!leader.is_playing && user.is_playing)
                     validateResponse(await spotifyApi.pause());
-                else
+                else if (leader.is_playing && !user.is_playing)
                     validateResponse(await spotifyApi.play());
             } catch (error) {
                 logger.error(error, "in syncPlayback().loop.pause()");
@@ -553,11 +552,7 @@ function compareState(data) {
 }
 
 async function updateRemote (interaction) {
-    const db = new StormDB(Engine);
-    const options = db.get('options').value();
-
     try {
-        let message;
         //checking API call interval
         if (!getLeaderId() && updateIntervalId) {
             clearInterval(updateIntervalId)
@@ -682,7 +677,6 @@ function searchMessage (interaction, data, once) {
     if (!data || !data.tracks.length)
         return { embeds: [{ description: 'no tracks found' }] };
     const track = data.tracks[searchIndex];
-    searchTrackId = track.id;
     const embed = new MessageEmbed()
         .setTitle(`\`\`\`${track.name} by ${track.artists}\`\`\``)
         .setDescription(once ?

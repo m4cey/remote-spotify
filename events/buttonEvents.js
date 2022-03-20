@@ -17,7 +17,7 @@ buttons.joinButton = async (interaction) => {
 		try {
 			const token = await methods.getToken(userId);
 			if (!token) throw "No token provided"
-			await spotifyApi.setAccessToken(token);
+			spotifyApi.setAccessToken(token);
 			const data = await spotifyApi.getMyCurrentPlaybackState();
 			methods.validateResponse(data, true);
 			await methods.addListener(interaction);
@@ -117,7 +117,7 @@ buttons.likeButton = async (interaction) => {
 	}
 }
 
-buttons.refreshButton = async (interaction) => {
+buttons.refreshButton = async () => {
 }
 
 buttons.playlistButton = async (interaction) => {

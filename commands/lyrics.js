@@ -1,7 +1,6 @@
 require('dotenv').config();
 const logger = require('../logger.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { MessageEmbed } = require('discord.js');
 const { getLyrics } = require('genius-lyrics-api');
 const methods = require('../methods.js');
 
