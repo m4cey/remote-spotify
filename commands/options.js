@@ -25,14 +25,6 @@ module.exports = {
 				.setDescription('enable or disable follow up messages')
 				.setRequired(true)))
 		.addSubcommand(subcommand =>
-			subcommand.setName('sync_context')
-			.setDescription('sync the playing context')
-			.addBooleanOption(option =>
-				option
-				.setName('enabled')
-				.setDescription('toggle between syncing playlists/albums vs syncing individual tracks')
-				.setRequired(true)))
-		.addSubcommand(subcommand =>
 			subcommand.setName('threshold')
 			.setDescription('The number of messages to wait before sending a follow up')
 			.addIntegerOption(option =>
@@ -60,7 +52,6 @@ module.exports = {
 				value = 1000 * interaction.options.getNumber('float');
 				break;
 			case 'followup':
-			case 'sync_context':
 				value = interaction.options.getBoolean('enabled');
 				break;
 			case 'threshold':

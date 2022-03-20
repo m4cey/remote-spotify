@@ -34,6 +34,8 @@ function apiError(message, status) {
 function validateResponse(data, device_error) {
     if (!data)
         throw new apiError("Can't connect to spotify API", 503);
+    if (data.statusCode == 404)
+        throw new apiError("Resource not found", 404);
     if (device_error && data.statusCode == 204)
         throw new apiError("User device is inactive", 204);
     if (data.body.error)
@@ -445,7 +447,6 @@ async function syncPlayback(users) {
         const spotifyApi = new SpotifyWebApi();
         const db = new StormDB(Engine);
         const margin = db.get('options.margin').value();
-        const sync_context = db.get('options.sync_context').value();
 
         for (user of users) {
             if (!leader.track.id)
@@ -461,37 +462,20 @@ async function syncPlayback(users) {
             if (synced)
                 continue;
             logger.debug(`${user.userId} ${user.name} >>>>UNSYNCED`);
-            let multiUris = leader.queue.tracks.length > 1;
             syncing[user.userId] = true;
             try {
                 if (user.track.id != leader.track.id) {
-                    if (sync_context && leader.queue.tracks.length
-                        && (user.duration - user.progress) > margin) {
-                        const options = { context_uri: leader.context.uri };
-                        validateResponse(await spotifyApi.play(options));
-                        for (let i = 0; i < leader.queue.index; i++) {
-                            logger.debug(`SKIPPING TRACK:
-                                ${i+1} / ${leader.queue.index}`);
-                            validateResponse(await spotifyApi.skipToNext());
-                        }
-                    } else if (multiUris)  {
-                        const options = {
-                            uris: [leader.track.uri].concat(leader.queue.tracks.map(
-                                track => track.uri))
-                        };
-                        validateResponse(await spotifyApi.play(options));
-                    }
-                    else {
-                        const options = { uris: [leader.track.uri] };
-                        validateResponse(await spotifyApi.play(options));
-                    }
+                    const options = { uris: [leader.track.uri] };
+                    if (leader.queue.tracks.length)
+                        options.uris.concat(leader.queue.tracks.map(
+                            track => track.uri))
+                    validateResponse(await spotifyApi.play(options));
                 }
             } catch (error) {
                 logger.error(error, "in syncPlayback().loop.play()");
             }
             try {
-                validateResponse(await spotifyApi.seek(leader.progress
-                    + leader.is_playing * 1000));
+                validateResponse(await spotifyApi.seek(leader.progress));
             } catch (error) {
                 logger.error(error, "in syncPlayback().loop.seek()");
             }
@@ -502,16 +486,6 @@ async function syncPlayback(users) {
                     validateResponse(await spotifyApi.play());
             } catch (error) {
                 logger.error(error, "in syncPlayback().loop.pause()");
-            }
-            try {
-                if (!sync_context && !multiUris) {
-                    logger.debug('adding to queue');
-                    validateResponse(
-                        await spotifyApi.addToQueue(leader.queue.tracks[0].uri)
-                    );
-                }
-            } catch (error) {
-                logger.error(error, "in syncPlayback().loop.queue()");
             } finally {
                 logger.debug("syncing done");
                 //disable syncing for user for a timeout to avoid conflicts
