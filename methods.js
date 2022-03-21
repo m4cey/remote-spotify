@@ -527,10 +527,17 @@ async function refreshRemote (interaction) {
     try {
         if (followup) {
             const blank = blankMessage();
-            interaction.editReply(blank);
-            lastMessage.edit(blank);
-            lastMessage = await interaction.followUp(message);
-        } else {
+            try {
+                const temp = await interaction.followUp(message);
+                interaction.editReply(blank);
+                lastMessage.edit(blank);
+                lastMessage = temp;
+            } catch (error) {
+                logger.warn(error, 'In refreshRemote().followip');
+                followup = false;
+            }
+        }
+        if (!followup) {
             if (lastMessage)
                 await lastMessage.edit(message);
             else {
