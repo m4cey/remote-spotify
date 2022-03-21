@@ -79,7 +79,6 @@ function postGuide (interaction) {
 }
 
 async function getToken (userId) {
-    if (!listening.includes(userId)) return;
     const db = new StormDB(Engine);
     const cookie = db.get('authenticated').get(userId)?.value();
     try {
@@ -579,7 +578,7 @@ async function updateRemote (interaction) {
             state = null;
             throw "data object is null"
         }
-        // update queue only on track change
+        // update queue on track change
         if (data[0] && state?.[0]?.track?.id != data[0]?.track?.id) {
             data[0].queue = await getQueue(data[0], 10);
             queue = data[0].queue;
