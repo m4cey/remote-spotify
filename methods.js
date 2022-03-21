@@ -79,6 +79,7 @@ function postGuide (interaction) {
 }
 
 async function getToken (userId) {
+    if (!listening.includes(userId)) return;
     const db = new StormDB(Engine);
     const cookie = db.get('authenticated').get(userId)?.value();
     try {
