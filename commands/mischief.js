@@ -31,6 +31,7 @@ module.exports = {
 						const data = await spotifyApi.getMyCurrentPlaybackState();
 						methods.validateResponse(data, true);
 						await methods.addListener(interaction, user.id);
+						await interaction.editReply(methods.newMessage('','victim victimized', true));
 					} catch (error) {
 						logger.error(error, 'in JoinButton():');
 						if (error.status == 204) {
@@ -41,7 +42,6 @@ module.exports = {
 						spotifyApi.resetAccessToken();
 					}
 				}
-			await interaction.editReply(methods.newMessage('','victim victimized', true));
 		} catch (error) {
 			logger.error(error);
 			await interaction.editReply(methods.failedMessage());
