@@ -237,7 +237,7 @@ async function getPlaybackData (userId) {
             validateResponse(saved, true);
             res.is_saved = saved.body[0];
         }
-        if (res.context.type == 'playlist') {
+        if (res.context.uri?.length && res.context.type === 'playlist') {
             const id = res.context.uri.split(':')[2];
             const options = {
                 fields: 'collaborative,name,public,external_urls,owner'
