@@ -41,6 +41,8 @@ module.exports = {
 					} finally {
 						spotifyApi.resetAccessToken();
 					}
+				} else {
+					await interaction.editReply(methods.failedMessage());
 				}
 		} catch (error) {
 			logger.error(error);
