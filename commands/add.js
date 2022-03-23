@@ -1,8 +1,5 @@
 const logger = require('../logger.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { MessageEmbed } = require('discord.js');
-const StormDB = require("stormdb");
-const { Engine } = require('../database.js');
 const methods = require('../methods.js');
 const SpotifyWebApi = require('spotify-web-api-node');
 
@@ -59,7 +56,7 @@ module.exports = {
 					await interaction.deferReply();
 					const token = await methods.getToken(interaction.user.id);
 					if (!token) throw "No token provided"
-					await spotifyApi.setAccessToken(token);
+					spotifyApi.setAccessToken(token);
 					let track = await spotifyApi.getTrack(id);
 					methods.validateResponse(track, true);
 					methods.getSearchIndex(0);

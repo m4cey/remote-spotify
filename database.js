@@ -1,6 +1,5 @@
 const StormDB = require("stormdb");
 const { encrypt, decrypt } = require('./crypto.js');
-const createConnection = require('./sftp.js');
 
 const Engine = new StormDB.localFileEngine("/tmp/db.stormdb", {
   serialize: data => {

@@ -16,7 +16,7 @@ async function retrieveDB () {
 }
 
 async function updateDB () {
-	await fs.watch('/tmp/db.stormdb', async () => {
+	fs.watch('/tmp/db.stormdb', async () => {
 		logger.debug("db changed, uploading...");
 		await sftp.fastPut('/tmp/db.stormdb', '/storage/db.stormdb');
 		logger.debug("finished uploading...");
