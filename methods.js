@@ -81,6 +81,7 @@ function postGuide (interaction) {
 async function getToken (userId) {
     const db = new StormDB(Engine);
     const cookie = db.get('authenticated').get(userId)?.value();
+    logger.info(cookie);
     try {
         if (!cookie) throw "Failed to get cookies";
         const options = {
