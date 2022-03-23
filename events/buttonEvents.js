@@ -20,7 +20,7 @@ buttons.joinButton = async (interaction) => {
 			spotifyApi.setAccessToken(token);
 			const data = await spotifyApi.getMyCurrentPlaybackState();
 			methods.validateResponse(data, true);
-			await methods.addListener(interaction);
+			await methods.addListener(interaction, userId);
 		} catch (error) {
 			logger.error(error, 'in JoinButton():');
 			if (error.status == 204) {

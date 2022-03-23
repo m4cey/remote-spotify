@@ -792,20 +792,20 @@ function isAuthenticated (userId) {
     return userIds.includes(userId);
 }
 
-async function addListener (interaction) {
-    logger.debug('Adding listener ' + interaction.user.tag);
-    listening.push(interaction.user.id);
-    usernames[interaction.user.id] = await getUsername(interaction, interaction.user.id);
+async function addListener (interaction, userId) {
+    logger.debug('Adding listener ' + userId);
+    listening.push(userId);
+    usernames[userId] = await getUsername(interaction, userId);
     updateOnInterval = true;
     refreshOnce = false;
     const spotifyApi = new SpotifyWebApi();
     try {
-        const token = await getToken(interaction.user.id);
+        const token = await getToken(userId);
         if (!token) throw "No token provided"
         spotifyApi.setAccessToken(token);
         const data = await spotifyApi.getMe();
         validateResponse(data, true);
-        accounts[interaction.user.id] = data.body.id;
+        accounts[userId] = data.body.id;
     } catch (error) {
         logger.warn(error, 'in addListener().playlist');
     } finally {
