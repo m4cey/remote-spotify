@@ -2,7 +2,7 @@ require('dotenv').config();
 const logger = require('../logger.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const methods = require('../methods.js');
-const { SpotifyWebApi } = require('spotify-web-api-node');
+const SpotifyWebApi = require('spotify-web-api-node');
 
 module.exports = {
 	data: new SlashCommandBuilder()
