@@ -237,8 +237,10 @@ async function getPlaybackData (userId) {
             validateResponse(saved, true);
             res.is_saved = saved.body[0];
         }
+        logger.info(res.context);
         if (res.context.uri?.length && res.context.type === 'playlist') {
-            const id = res.context.uri.split(':')[2];
+            const id = res.context.uri.split(':').pop();
+            logger.info(id);
             const options = {
                 fields: 'collaborative,name,public,external_urls,owner'
             };
@@ -316,7 +318,7 @@ function getContextData(data) {
 }
 
 function formatNameList(data) {
-    if (!data || !data.length)
+    if (!data || !data.length || !data[0].userId)
         return 'no users listening';
     let users = '';
     for (let user of data) {
@@ -565,8 +567,9 @@ function compareState(data) {
 async function updateRemote (interaction) {
     try {
         //checking API call interval
-        if (!getLeaderId() && updateIntervalId) {
-            clearInterval(updateIntervalId)
+        if (!getLeaderId()) {
+            if (updateIntervalId)
+                clearInterval(updateIntervalId)
             updateOnInterval = false;
         }
         let data = await getUserData(interaction);
