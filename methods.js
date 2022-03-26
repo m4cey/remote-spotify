@@ -258,6 +258,11 @@ async function getPlaybackData(userId, retries, interaction) {
     return res;
   } catch (error) {
     logger.error(error, "in getPlaybackData(): ");
+    if (listening[0] !== userId && error.status == 204) {
+      interaction.followUp(inactiveMessage());
+      removeListener(userId);
+      return;
+    }
     try {
       const db = new StormDB(Engine);
       const delay = db.get("options.delay").value();
@@ -270,22 +275,17 @@ async function getPlaybackData(userId, retries, interaction) {
         await wait(delay || 3000);
         res = await getPlaybackData(userId, retries - 1, interaction);
       }
-      if (!res && !retries) {
-        logger.error("USER TIMED OUT %d", userId);
-        if (error.status == 204) interaction.followUp(inactiveMessage());
-        interaction.followUp(
-          newMessage("", `${usernames[userId]} disconnected!`)
-        );
+      if (listening[0] === userId && !res && !retries) {
+        logger.error("LEADER TIMED OUT %d", userId);
+        interaction.followUp(`<@${userId}> disconnected!`);
         removeListener(userId);
       } else if (res) {
         logger.info("Connection recieved");
         return res;
       }
     } catch (error) {
-      interaction.followUp(
-        newMessage("", `${usernames[userId]} disconnected!`)
-      );
-      removeListener(userId);
+        interaction.followUp(`<@${userId}> disconnected!`);
+        removeListener(userId);
     } finally {
       updateOnInterval = true;
       setUpdateInterval(interaction);
