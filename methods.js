@@ -260,6 +260,7 @@ async function getPlaybackData(userId, retries, interaction) {
     logger.error(error, "in getPlaybackData(): ");
     if (listening[0] !== userId && error.status == 204) {
       interaction.followUp(inactiveMessage());
+      interaction.followUp(`<@${userId}> disconnected!`);
       removeListener(userId);
       return;
     }
@@ -284,8 +285,8 @@ async function getPlaybackData(userId, retries, interaction) {
         return res;
       }
     } catch (error) {
-        interaction.followUp(`<@${userId}> disconnected!`);
-        removeListener(userId);
+      interaction.followUp(`<@${userId}> disconnected!`);
+      removeListener(userId);
     } finally {
       updateOnInterval = true;
       setUpdateInterval(interaction);
