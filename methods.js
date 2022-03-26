@@ -629,7 +629,7 @@ async function updateRemote(interaction) {
     //timeout to update on estimated track end
     try {
       if (!data[0] || !data[0].progress) throw "data object is invalid";
-      const delay = data[0].duration - data[0].progress + 1000;
+      const delay = data[0].duration - data[0].progress + 3000;
       if (!timeoutId || timeoutDelay > delay) {
         timeoutDelay = delay;
         if (timeoutId) clearTimeout(timeoutId);
