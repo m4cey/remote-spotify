@@ -273,14 +273,18 @@ async function getPlaybackData(userId, retries, interaction) {
       if (!res && !retries) {
         logger.error("USER TIMED OUT %d", userId);
         if (error.status == 204) interaction.followUp(inactiveMessage());
-        interaction.followUp(newMessage("", "Leader disconnected!"));
+        interaction.followUp(
+          newMessage("", `${usernames[userId]} disconnected!`)
+        );
         removeListener(userId);
       } else if (res) {
         logger.info("Connection recieved");
         return res;
       }
     } catch (error) {
-      interaction.followUp(newMessage("", "Leader disconnected!"));
+      interaction.followUp(
+        newMessage("", `${usernames[userId]} disconnected!`)
+      );
       removeListener(userId);
     } finally {
       updateOnInterval = true;
@@ -309,7 +313,11 @@ async function getUserData(interaction) {
     try {
       const db = new StormDB(Engine);
       const retries = db.get("options.retries").value();
-      let data = await getPlaybackData(listening[i], (retries || 4) * !i, interaction);
+      let data = await getPlaybackData(
+        listening[i],
+        (retries || 4) * !i,
+        interaction
+      );
       if (!data) throw "data object is null";
       data.name = usernames[listening[i]];
       data.accountId = accounts[listening[i]];
