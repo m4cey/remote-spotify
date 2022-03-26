@@ -16,6 +16,14 @@ module.exports = {
 				.setDescription('in seconds, eg: 1, 2.5, etc')
 				.setRequired(true)))
 		.addSubcommand(subcommand =>
+			subcommand.setName('delay')
+			.setDescription('Seconds to wait between every retry')
+			.addNumberOption(option =>
+				option
+				.setName('float')
+				.setDescription('in seconds, eg: 1, 2.5, etc')
+				.setRequired(true)))
+		.addSubcommand(subcommand =>
 			subcommand.setName('followup')
 			.setDescription('Send a new remote control when there\'s other messages after it')
 			.addBooleanOption(option =>
@@ -26,6 +34,14 @@ module.exports = {
 		.addSubcommand(subcommand =>
 			subcommand.setName('threshold')
 			.setDescription('The number of messages to wait before sending a follow up')
+			.addIntegerOption(option =>
+				option
+				.setName('number')
+				.setDescription('a number, not a letter. a NUMBER')
+				.setRequired(true)))
+		.addSubcommand(subcommand =>
+			subcommand.setName('retries')
+			.setDescription('Number of retries before disonnecting leader')
 			.addIntegerOption(option =>
 				option
 				.setName('number')
@@ -48,12 +64,14 @@ module.exports = {
 		switch (option) {
 			case 'updaterate':
 			case 'margin':
+			case 'delay':
 				value = 1000 * interaction.options.getNumber('float');
 				break;
 			case 'followup':
 				value = interaction.options.getBoolean('enabled');
 				break;
 			case 'threshold':
+			case 'retries':
 				value = interaction.options.getInteger('number');
 				break;
 			default:

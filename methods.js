@@ -259,13 +259,15 @@ async function getPlaybackData(userId, retries, interaction) {
   } catch (error) {
     logger.error(error, "in getPlaybackData(): ");
     try {
+      const db = new StormDB(Engine);
+      const delay = db.get("options.delay").value();
       let res;
       if (retries > 0) {
         if (updateIntervalId) clearInterval(updateIntervalId);
         updateOnInterval = false;
         logger.warn("RETRIES LEFT %d", retries);
         syncing[userId] = true;
-        await wait(3000);
+        await wait(delay || 3000);
         res = await getPlaybackData(userId, retries - 1, interaction);
       }
       if (!res && !retries) {
@@ -305,7 +307,9 @@ async function getUserData(interaction) {
   let users = [];
   for (let i = 0; i < listening.length; i++) {
     try {
-      let data = await getPlaybackData(listening[i], 4 * !i, interaction);
+      const db = new StormDB(Engine);
+      const retries = db.get("options.retries").value();
+      let data = await getPlaybackData(listening[i], (retries || 4) * !i, interaction);
       if (!data) throw "data object is null";
       data.name = usernames[listening[i]];
       data.accountId = accounts[listening[i]];
