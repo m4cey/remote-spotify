@@ -664,6 +664,7 @@ function setUpdateInterval(interaction) {
 async function remote(interaction) {
   await updateRemote(interaction);
   setUpdateInterval(interaction);
+  refreshOnce = false;
   refreshRemote(interaction);
 }
 
