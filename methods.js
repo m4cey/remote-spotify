@@ -1,4 +1,5 @@
 require("dotenv").config();
+const wait = require("node:timers/promises").setTimeout;
 const logger = require("./logger.js");
 const axios = require("axios").default;
 const SpotifyWebApi = require("spotify-web-api-node");
@@ -257,24 +258,31 @@ async function getPlaybackData(userId, retries, interaction) {
     return res;
   } catch (error) {
     logger.error(error, "in getPlaybackData(): ");
-    if (error.status == 204) {
-      removeListener(userId);
-      interaction.followUp(inactiveMessage());
-    } else {
-      try {
-        let res;
-        if (retries > 0) {
-          logger.warn("RETRIES LEFT %d", retries);
-          res = await getPlaybackData(userId, retries - 1, interaction);
-        }
-        if (!res && !retries) {
-          logger.error("USER TIMED OUT %d", userId);
-          interaction.followUp(newMessage("", "Leader Timed Out"));
-          removeListener(userId);
-        } else if (res) return res;
-      } catch (error) {
-        removeListener(userId);
+    try {
+      let res;
+      if (retries > 0) {
+        if (updateIntervalId) clearInterval(updateIntervalId);
+        updateOnInterval = false;
+        logger.warn("RETRIES LEFT %d", retries);
+        syncing[userId] = true;
+        await wait(3000);
+        res = await getPlaybackData(userId, retries - 1, interaction);
       }
+      if (!res && !retries) {
+        logger.error("USER TIMED OUT %d", userId);
+        if (error.status == 204) interaction.followUp(inactiveMessage());
+        interaction.followUp(newMessage("", "Leader disconnected!"));
+        removeListener(userId);
+      } else if (res) {
+        logger.info("Connection recieved");
+        return res;
+      }
+    } catch (error) {
+      interaction.followUp(newMessage("", "Leader disconnected!"));
+      removeListener(userId);
+    } finally {
+      updateOnInterval = true;
+      setUpdateInterval(interaction);
     }
   } finally {
     spotifyApi.resetAccessToken();
@@ -297,7 +305,7 @@ async function getUserData(interaction) {
   let users = [];
   for (let i = 0; i < listening.length; i++) {
     try {
-      let data = await getPlaybackData(listening[i], !i * 4, interaction);
+      let data = await getPlaybackData(listening[i], 4 * !i, interaction);
       if (!data) throw "data object is null";
       data.name = usernames[listening[i]];
       data.accountId = accounts[listening[i]];
@@ -638,16 +646,20 @@ async function updateRemote(interaction) {
   }
 }
 
-async function remote(interaction) {
-  const db = new StormDB(Engine);
-
-  await updateRemote(interaction);
+function setUpdateInterval(interaction) {
+  logger.info("Setting update interval");
   if (updateOnInterval) {
+    const db = new StormDB(Engine);
     if (updateIntervalId) clearInterval(updateIntervalId);
     const delay = db.get("options.updaterate").value();
     logger.debug(`setting an update interval of ${delay} milliseconds`);
     updateIntervalId = setInterval(updateRemote, delay, interaction);
   }
+}
+
+async function remote(interaction) {
+  await updateRemote(interaction);
+  setUpdateInterval(interaction);
   refreshRemote(interaction);
 }
 
