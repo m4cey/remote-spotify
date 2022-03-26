@@ -196,9 +196,8 @@ async function getQueue(data, limit) {
   }
 }
 
-async function getPlaybackData(userId, retries) {
+async function getPlaybackData(userId, retries, interaction) {
   const spotifyApi = new SpotifyWebApi();
-
   try {
     const token = await getToken(userId);
     if (!token) throw "No token provided";
@@ -258,17 +257,21 @@ async function getPlaybackData(userId, retries) {
     return res;
   } catch (error) {
     logger.error(error, "in getPlaybackData(): ");
-    if (error.status == 204) removeListener(userId);
-    else {
+    if (error.status == 204) {
+      removeListener(userId);
+      interaction.followUp(inactiveMessage());
+    } else {
       try {
+        let res;
         if (retries > 0) {
-          logger.debug("RETRYING %d", retries);
-          let res = await getPlaybackData(userId, retries - 1);
-          if (!res) {
-            removeListener(userId);
-            logger.error("LEADER TIMED OUT");
-          } else return res;
-        } else removeListener(userId);
+          logger.warn("RETRIES LEFT %d", retries);
+          res = await getPlaybackData(userId, retries - 1, interaction);
+        }
+        if (!res && !retries) {
+          logger.error("USER TIMED OUT %d", userId);
+          interaction.followUp(newMessage("", "Leader Timed Out"));
+          removeListener(userId);
+        } else if (res) return res;
       } catch (error) {
         removeListener(userId);
       }
@@ -289,12 +292,12 @@ function getUser(userId) {
   return state?.find((user) => user.userId === userId);
 }
 
-async function getUserData() {
+async function getUserData(interaction) {
   if (!listening.length) return;
   let users = [];
   for (let i = 0; i < listening.length; i++) {
     try {
-      let data = await getPlaybackData(listening[i], !i * 4);
+      let data = await getPlaybackData(listening[i], !i * 4, interaction);
       if (!data) throw "data object is null";
       data.name = usernames[listening[i]];
       data.accountId = accounts[listening[i]];
