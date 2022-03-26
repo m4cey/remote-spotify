@@ -12,7 +12,6 @@ buttons.joinButton = async (interaction) => {
 		return;
 	}
 	if (methods.isAuthenticated(userId)) {
-		logger.debug('USERID: ', userId);
 		const spotifyApi = new SpotifyWebApi();
 		try {
 			const token = await methods.getToken(userId);
