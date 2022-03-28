@@ -261,6 +261,7 @@ async function getPlaybackData(userId, retries, interaction) {
         interaction.followUp(inactiveMessage());
         interaction.followUp(`<@${userId}> disconnected!`);
         removeListener(userId);
+        spotifyApi.resetAccessToken();
         return;
       }
       try {
@@ -545,7 +546,7 @@ async function syncPlayback(users) {
         logger.error(error);
       } finally {
         logger.debug("syncing done");
-        //disable syncing for user for a timeout to avoid conflicts
+        //cooldown syncing for user to avoid conflicts
         setTimeout(
           (user) => {
             syncing[user.userId] = false;
