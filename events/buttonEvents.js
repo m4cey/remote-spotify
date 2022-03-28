@@ -119,7 +119,9 @@ buttons.likeButton = async (interaction) => {
   }
 };
 
-buttons.refreshButton = async () => {};
+buttons.refreshButton = async () => {
+  methods.getRefreshOnce(false);
+};
 
 buttons.playlistButton = async (interaction) => {
   if (!methods.isListener(interaction.user.id)) return;
@@ -208,7 +210,6 @@ module.exports = {
       await interaction.deferUpdate();
       await buttons[interaction.customId + "Button"](interaction);
       if (!interaction.customId.includes("Search")) {
-        methods.getRefreshOnce(false);
         await methods.remote(interaction);
       }
     } catch (error) {

@@ -432,7 +432,7 @@ async function remoteMessage(data) {
   data[0].is_playing ??= false;
   let fields = [
     {
-      name: `Listening: ${listening.length || ""}`,
+      name: "Listening:",
       value: `\`\`\`${users}\`\`\``,
     },
   ];
@@ -596,7 +596,7 @@ async function refreshRemote(interaction) {
         lastMessage.edit(blank);
         lastMessage = temp;
       } catch (error) {
-        logger.warn(error, "In refreshRemote().followip");
+        logger.warn(error, "In refreshRemote().followup");
         followup = false;
       }
     }
@@ -647,7 +647,7 @@ async function updateRemote(interaction) {
       data[0].queue = queue;
       if (state && state[0]) data[0].color = state[0].color;
     }
-    if (data.length > 1) syncPlayback(data);
+    if (listening.length > 1) syncPlayback(data);
     // update local state; no manipulating data after this point
     state = data;
   } catch (error) {
@@ -860,8 +860,12 @@ async function addListener(interaction, userId) {
 function removeListener(userId) {
   logger.debug("Removing listener " + userId);
   listening = listening.filter((user) => user != userId);
-  syncing[userId] = false;
-  refreshOnce = false;
+  if (!listening.length) {
+    updateOnInterval = false;
+    if (updateIntervalId) clearInterval(updateIntervalId);
+  }
+  delete syncing[userId];
+  delete usernames[userId];
 }
 
 module.exports = {

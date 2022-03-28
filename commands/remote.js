@@ -12,12 +12,16 @@ module.exports = {
       logger.debug(`interaction ${interaction.id} beggining deferral`);
       await interaction.deferReply();
       logger.debug(`interaction ${interaction.id} has been deferred`);
-      const data = await methods.getUserData(interaction);
-      if (data?.length) data[0].queue = await methods.getQueue(data[0], 10);
+      let data;
+      if (methods.getLeaderId()) {
+        data = await methods.getUserData(interaction);
+        if (data?.length) data[0].queue = await methods.getQueue(data[0], 10);
+      }
       const message = await methods.remoteMessage(data);
       const lastMessage = methods.getLastMessage();
       if (lastMessage) lastMessage.edit(methods.blankMessage());
-      methods.setLastMessage(await interaction.editReply(message));
+      const newMessage = await interaction.editReply(message);
+      methods.setLastMessage(newMessage);
     } catch (error) {
       logger.error(error);
       await interaction.editReply(methods.failedMessage());
