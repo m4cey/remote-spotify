@@ -38,10 +38,12 @@ module.exports = {
       authenticated: {},
       options: {
         followup: true,
-        sync_context: false,
         threshold: 6,
+        retries: 4,
+        delay: 3000,
         updaterate: 5000,
         margin: 10000,
+        sync_cooldown: 5000,
       },
     }).save();
   },
