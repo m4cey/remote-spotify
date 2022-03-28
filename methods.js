@@ -501,7 +501,7 @@ function isSynced(leader, user) {
 
 async function syncPlayback(users) {
   const db = new StormDB(Engine);
-  const sync_cooldown = db.get("options.sync_cooldown").value() || 5000;
+  const { sync_cooldown, margin } = db.get("options").value();
   try {
     if (!users || users.length <= 1) throw "data object is invalid";
     const leader = users[0];
@@ -520,7 +520,10 @@ async function syncPlayback(users) {
       logger.debug(`${user.userId} ${user.name} >>>>UNSYNCED`);
       syncing[user.userId] = true;
       try {
-        if (user.track.id != leader.track.id) {
+        if (
+          user.track.id != leader.track.id &&
+          user.duration - user.progress > margin
+        ) {
           const options = { uris: [leader.track.uri] };
           if (leader.queue.tracks.length)
             options.uris.concat(leader.queue.tracks.map((track) => track.uri));
