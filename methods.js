@@ -71,13 +71,13 @@ function inactiveMessage() {
   return message;
 }
 
-function postGuide(interaction) {
+function loginMessage() {
   const message = newMessage(
     "Authentication Required",
     "use `/login` to generate session cookies.",
     true
   );
-  interaction.followUp(message);
+  return message;
 }
 
 async function getToken(userId) {
@@ -238,7 +238,6 @@ async function getPlaybackData(userId, retries, interaction) {
     }
     if (res.context.uri?.length && res.context.type === "playlist") {
       const id = res.context.uri.split(":").pop();
-      logger.info(id);
       const options = {
         fields: "collaborative,name,public,external_urls,owner",
       };
@@ -343,7 +342,7 @@ async function getUserData(interaction) {
 function getContextData(data) {
   let context = { name: "" };
   try {
-    if (!data || !data.length) throw "data object is null or empty";
+    if (!data) throw "data object is null";
     if (!data.context) throw "data.context is null";
     if (!data.context.type) throw "data.context.type is null";
     if (data.context.type == "artist") throw "artist context not supported";
@@ -358,7 +357,8 @@ function getContextData(data) {
       url: data[type].url,
     };
   } catch (error) {
-    logger.warn(error, "In getContextData():");
+    logger.warn("In getContextData():");
+    logger.warn(error);
   }
   return context;
 }
@@ -590,9 +590,7 @@ async function refreshRemote(interaction) {
     }
     if (!followup) {
       if (lastMessage) await lastMessage.edit(message);
-      else {
-        lastMessage = await interaction.message.edit(message);
-      }
+      else lastMessage = await interaction.message.edit(message);
     }
   } catch (error) {
     logger.error(error, "In refreshRemote()");
@@ -625,7 +623,7 @@ async function updateRemote(interaction) {
       refreshOnce = false;
     }
     if (!data || !data.length) {
-      state = null;
+      state = data = null;
       throw "data object is null";
     }
     // update queue on track change
@@ -641,7 +639,8 @@ async function updateRemote(interaction) {
     // update local state; no manipulating data after this point
     state = data;
   } catch (error) {
-    logger.warn(error, "In updateRemote():");
+    logger.warn("In updateRemote()");
+    logger.warn(error);
   } finally {
     refreshRemote(interaction);
   }
@@ -653,7 +652,6 @@ async function updateRemote(interaction) {
 }
 
 function setUpdateInterval(interaction) {
-  logger.info("Setting update interval");
   if (updateOnInterval) {
     const db = new StormDB(Engine);
     if (updateIntervalId) clearInterval(updateIntervalId);
@@ -666,8 +664,6 @@ function setUpdateInterval(interaction) {
 async function remote(interaction) {
   await updateRemote(interaction);
   setUpdateInterval(interaction);
-  refreshOnce = false;
-  refreshRemote(interaction);
 }
 
 function getSearchOffset(value) {
@@ -852,7 +848,6 @@ async function addListener(interaction, userId) {
 function removeListener(userId) {
   logger.debug("Removing listener " + userId);
   listening = listening.filter((user) => user != userId);
-  logger.debug(listening);
   syncing[userId] = false;
   refreshOnce = false;
 }
@@ -862,7 +857,7 @@ module.exports = {
   isListener,
   addListener,
   removeListener,
-  postGuide,
+  loginMessage,
   getToken,
   apiError,
   validateResponse,
