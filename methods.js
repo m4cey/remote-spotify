@@ -17,8 +17,6 @@ let syncing = {};
 let lastMessage;
 let updateOnInterval;
 let updateIntervalId;
-let timeoutId;
-let timeoutDelay;
 let searchData;
 let searchIndex = 0;
 let searchOffset = 0;
@@ -258,7 +256,7 @@ async function getPlaybackData(userId, retries, interaction) {
     return res;
   } catch (error) {
     logger.error(error, "in getPlaybackData(): ");
-    if (listening[0] !== userId && error.status == 204) {
+    if (error.status == 204) {
       interaction.followUp(inactiveMessage());
       interaction.followUp(`<@${userId}> disconnected!`);
       removeListener(userId);
@@ -345,7 +343,7 @@ async function getUserData(interaction) {
 function getContextData(data) {
   let context = { name: "" };
   try {
-    if (!data) throw "data object is null or empty";
+    if (!data || !data.length) throw "data object is null or empty";
     if (!data.context) throw "data.context is null";
     if (!data.context.type) throw "data.context.type is null";
     if (data.context.type == "artist") throw "artist context not supported";
@@ -406,7 +404,6 @@ async function remoteMessage(data) {
   const users = formatNameList(data);
   const userCount = data ? data.length : 0;
   const context = getContextData(data ? data[0] : null);
-  // logger.debug("CONTEXT: " + context.name);
   const queue = formatQueue(data ? data[0] : null);
   const list = [
     "HELP!",
@@ -627,35 +624,22 @@ async function updateRemote(interaction) {
       logger.debug("State has changed!");
       refreshOnce = false;
     }
-    if (!data) {
+    if (!data || !data.length) {
       state = null;
       throw "data object is null";
     }
     // update queue on track change
-    if (data[0] && state?.[0]?.track?.id != data[0]?.track?.id) {
+    if (state?.[0]?.track?.id != data[0]?.track?.id) {
       data[0].queue = await getQueue(data[0], 10);
       queue = data[0].queue;
-    } else if (data[0]) {
+    } else {
       // restore data that wasn't computed from state
       data[0].queue = queue;
       if (state && state[0]) data[0].color = state[0].color;
     }
-
     if (data.length > 1) syncPlayback(data);
     // update local state; no manipulating data after this point
-    if (data && data.length) state = data;
-    //timeout to update on estimated track end
-    try {
-      if (!data[0] || !data[0].progress) throw "data object is invalid";
-      const delay = data[0].duration - data[0].progress + 3000;
-      if (!timeoutId || timeoutDelay > delay) {
-        timeoutDelay = delay;
-        if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(onTrackChange, delay, interaction);
-      }
-    } catch (error) {
-      logger.warn(error, "in updateRemote().timeout");
-    }
+    state = data;
   } catch (error) {
     logger.warn(error, "In updateRemote():");
   } finally {
@@ -684,14 +668,6 @@ async function remote(interaction) {
   setUpdateInterval(interaction);
   refreshOnce = false;
   refreshRemote(interaction);
-}
-
-async function onTrackChange(interaction) {
-  logger.debug("track change update");
-  timeoutId = 0;
-  timeoutDelay = 0;
-  refreshOnce = false;
-  await refreshRemote(interaction);
 }
 
 function getSearchOffset(value) {
