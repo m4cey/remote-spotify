@@ -315,23 +315,28 @@ async function getUserData(interaction) {
   if (!listening.length) return;
   let users = [];
   for (let i = 0; i < listening.length; i++) {
+    const userId = listening[i];
     try {
       const db = new StormDB(Engine);
       const retries = db.get("options.retries").value();
       let data = await getPlaybackData(
-        listening[i],
+        userId,
         (retries || 4) * !i,
         interaction
       );
+      if (!isListener(userId)) {
+        i--;
+        continue;
+      }
       if (!data) throw "data object is null";
-      data.name = usernames[listening[i]];
-      data.accountId = accounts[listening[i]];
+      data.name = usernames[userId];
+      data.accountId = accounts[userId];
       if (i > 0) {
         data.is_synced = isSynced(users[0], data);
       }
       users.push(data);
     } catch (error) {
-      logger.error(error, `in getUserData().loop: ${listening[i]}`);
+      logger.error(error, `in getUserData().loop: ${userId}`);
     }
   }
   return users;
