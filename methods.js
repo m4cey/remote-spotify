@@ -278,15 +278,19 @@ async function getPlaybackData(userId, retries, interaction) {
       }
       if (listening[0] === userId && !res && !retries) {
         logger.error("LEADER TIMED OUT %d", userId);
-        interaction.followUp(`<@${userId}> disconnected!`);
         removeListener(userId);
+        interaction.followUp(`<@${userId}> disconnected!`);
       } else if (res) {
         logger.info("Connection recieved");
         return res;
       }
     } catch (error) {
-      interaction.followUp(`<@${userId}> disconnected!`);
       removeListener(userId);
+      try {
+        interaction.followUp(`<@${userId}> disconnected!`);
+      } catch (error) {
+        logger.error(error);
+      }
     } finally {
       updateOnInterval = true;
       setUpdateInterval(interaction);
