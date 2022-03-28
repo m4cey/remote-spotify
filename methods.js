@@ -254,43 +254,46 @@ async function getPlaybackData(userId, retries, interaction) {
     }
     return res;
   } catch (error) {
-    logger.error(error, "in getPlaybackData(): ");
-    if (error.status == 204) {
-      interaction.followUp(inactiveMessage());
-      interaction.followUp(`<@${userId}> disconnected!`);
-      removeListener(userId);
-      return;
-    }
-    try {
-      const db = new StormDB(Engine);
-      const delay = db.get("options.delay").value();
-      let res;
-      if (retries > 0) {
-        if (updateIntervalId) clearInterval(updateIntervalId);
-        updateOnInterval = false;
-        logger.warn("RETRIES LEFT %d", retries);
-        syncing[userId] = true;
-        await wait(delay || 3000);
-        res = await getPlaybackData(userId, retries - 1, interaction);
-      }
-      if (listening[0] === userId && !res && !retries) {
-        logger.error("LEADER TIMED OUT %d", userId);
+    logger.error("in getPlaybackData()");
+    logger.error(error);
+    if (isListener(userId)) {
+      if (error.status == 204) {
+        interaction.followUp(inactiveMessage());
+        interaction.followUp(`<@${userId}> disconnected!`);
         removeListener(userId);
-        interaction.followUp(`<@${userId}> disconnected!`);
-      } else if (res) {
-        logger.info("Connection recieved");
-        return res;
+        return;
       }
-    } catch (error) {
-      removeListener(userId);
       try {
-        interaction.followUp(`<@${userId}> disconnected!`);
+        const db = new StormDB(Engine);
+        const delay = db.get("options.delay").value();
+        let res;
+        if (retries > 0) {
+          if (updateIntervalId) clearInterval(updateIntervalId);
+          updateOnInterval = false;
+          logger.warn("RETRIES LEFT %d", retries);
+          syncing[userId] = true;
+          await wait(delay || 3000);
+          res = await getPlaybackData(userId, retries - 1, interaction);
+        }
+        if (!res && !retries) {
+          logger.error("LEADER TIMED OUT %d", userId);
+          removeListener(userId);
+          interaction.followUp(`<@${userId}> disconnected!`);
+        } else if (res) {
+          logger.info("Connection recieved");
+          return res;
+        }
       } catch (error) {
-        logger.error(error);
+        removeListener(userId);
+        try {
+          interaction.followUp(`<@${userId}> disconnected!`);
+        } catch (error) {
+          logger.error(error);
+        }
+      } finally {
+        updateOnInterval = true;
+        setUpdateInterval(interaction);
       }
-    } finally {
-      updateOnInterval = true;
-      setUpdateInterval(interaction);
     }
   } finally {
     spotifyApi.resetAccessToken();
@@ -496,6 +499,8 @@ function isSynced(leader, user) {
 }
 
 async function syncPlayback(users) {
+  const db = new StormDB(Engine);
+  const sync_cooldown = db.get("options.sync_cooldown").value() || 5000;
   try {
     if (!users || users.length <= 1) throw "data object is invalid";
     const leader = users[0];
@@ -521,12 +526,14 @@ async function syncPlayback(users) {
           validateResponse(await spotifyApi.play(options));
         }
       } catch (error) {
-        logger.error(error, "in syncPlayback().loop.play()");
+        logger.error("in syncPlayback().play()");
+        logger.error(error);
       }
       try {
         validateResponse(await spotifyApi.seek(leader.progress));
       } catch (error) {
-        logger.error(error, "in syncPlayback().loop.seek()");
+        logger.error("in syncPlayback().seek()");
+        logger.error(error);
       }
       try {
         if (!leader.is_playing && user.is_playing)
@@ -534,7 +541,8 @@ async function syncPlayback(users) {
         else if (leader.is_playing && !user.is_playing)
           validateResponse(await spotifyApi.play());
       } catch (error) {
-        logger.error(error, "in syncPlayback().loop.pause()");
+        logger.error("in syncPlayback().pause()");
+        logger.error(error);
       } finally {
         logger.debug("syncing done");
         //disable syncing for user for a timeout to avoid conflicts
@@ -542,7 +550,7 @@ async function syncPlayback(users) {
           (user) => {
             syncing[user.userId] = false;
           },
-          5000,
+          sync_cooldown,
           user
         );
         spotifyApi.resetAccessToken();
