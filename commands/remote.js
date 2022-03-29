@@ -8,26 +8,25 @@ module.exports = {
     .setDescription("Start a party and control playback."),
 
   async execute(interaction) {
-    let newMessage;
     try {
       logger.debug(`interaction ${interaction.id} beggining deferral`);
-      newMessage = await interaction.deferReply({ fetchReply: true });
-      logger.debug(newMessage);
+      await interaction.deferReply();
       logger.debug(`interaction ${interaction.id} has been deferred`);
       let data;
       if (methods.getLeaderId()) {
         data = await methods.getUserData(interaction);
+        logger.debug("userData recieved");
         if (data?.length) data[0].queue = await methods.getQueue(data[0], 10);
       }
       const message = await methods.remoteMessage(data);
+      logger.debug("remoteMessage recieved");
       const lastMessage = methods.getLastMessage();
       if (lastMessage) lastMessage.edit(methods.blankMessage());
-      await newMessage.edit(message);
+      const newMessage = await interaction.editReply(message);
       methods.setLastMessage(newMessage);
     } catch (error) {
       logger.error(error);
-      if (newMessage) await newMessage.edit(methods.failedMessage());
-      else await interaction.reply(methods.failedMessage());
+      await interaction.editReply(methods.failedMessage());
     }
   },
 };
