@@ -20,9 +20,11 @@ module.exports = {
       }
       const message = await methods.remoteMessage(data);
       logger.debug("remoteMessage recieved");
+      logger.debug(message);
       const lastMessage = methods.getLastMessage();
       if (lastMessage) lastMessage.edit(methods.blankMessage());
       const newMessage = await interaction.editReply(message);
+      logger.debug("message sent?");
       methods.setLastMessage(newMessage);
     } catch (error) {
       logger.error(error);
