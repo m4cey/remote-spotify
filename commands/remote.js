@@ -23,6 +23,7 @@ module.exports = {
       logger.debug(message);
       const lastMessage = methods.getLastMessage();
       if (lastMessage) lastMessage.edit(methods.blankMessage());
+      logger.debug(interaction);
       const newMessage = await interaction.editReply(message);
       logger.debug("message sent?");
       methods.setLastMessage(newMessage);
