@@ -8,9 +8,11 @@ module.exports = {
     .setDescription("Start a party and control playback."),
 
   async execute(interaction) {
+    let newMessage;
     try {
       logger.debug(`interaction ${interaction.id} beggining deferral`);
-      await interaction.deferReply();
+      newMessage = await interaction.deferReply({ fetchReply: true });
+      logger.debug(newMessage);
       logger.debug(`interaction ${interaction.id} has been deferred`);
       let data;
       if (methods.getLeaderId()) {
@@ -20,11 +22,12 @@ module.exports = {
       const message = await methods.remoteMessage(data);
       const lastMessage = methods.getLastMessage();
       if (lastMessage) lastMessage.edit(methods.blankMessage());
-      const newMessage = await interaction.editReply(message);
+      await newMessage.edit(message);
       methods.setLastMessage(newMessage);
     } catch (error) {
       logger.error(error);
-      await interaction.editReply(methods.failedMessage());
+      if (newMessage) await newMessage.edit(methods.failedMessage());
+      else await interaction.reply(methods.failedMessage());
     }
   },
 };
