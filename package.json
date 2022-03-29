@@ -23,7 +23,7 @@
   "main": "index.js",
   "scripts": {
     "start": "npm run deploy && node .",
-    "dev": "node . | npx pino-pretty -i pid,hostname -t yyyy-mm-dd HH:MM:ss",
+    "dev": "LOG_LEVEL=debug LOG=0 node . | pino-pretty -i pid,hostname -t yyyy-mm-dd HH:MM:ss",
     "deploy": "node deploy-commands.js"
   },
   "repository": {
