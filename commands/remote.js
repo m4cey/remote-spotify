@@ -11,6 +11,8 @@ module.exports = {
     try {
       logger.debug(`interaction ${interaction.id} beggining deferral`);
       await interaction.deferReply();
+      await interactione.editReply("WORK");
+      return;
       logger.debug(`interaction ${interaction.id} has been deferred`);
       let data;
       if (methods.getLeaderId()) {
