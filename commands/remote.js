@@ -9,11 +9,9 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      logger.debug(`interaction ${interaction.id} beggining deferral`);
       await interaction.deferReply();
-      await interactione.editReply("WORK");
+      await interaction.editReply("WORK");
       return;
-      logger.debug(`interaction ${interaction.id} has been deferred`);
       let data;
       if (methods.getLeaderId()) {
         data = await methods.getUserData(interaction);
