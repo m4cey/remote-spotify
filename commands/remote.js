@@ -10,7 +10,6 @@ module.exports = {
   async execute(interaction) {
     try {
       await interaction.deferReply();
-      console.log("DEFFERED");
       let data;
       if (methods.getLeaderId()) {
         data = await methods.getUserData(interaction);

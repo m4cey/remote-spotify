@@ -477,7 +477,10 @@ async function remoteMessage(data) {
       .setStyle("SECONDARY"),
     new MessageButton().setCustomId("like").setLabel("❤️").setStyle("SECONDARY")
   );
-  return { embeds: [embed], components: [playbackRow, partyRow] };
+  return {
+    embeds: [embed],
+    components: [playbackRow, partyRow],
+  };
 }
 
 function getRefreshOnce(value) {
