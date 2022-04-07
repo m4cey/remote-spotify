@@ -257,8 +257,7 @@ async function getPlaybackData(userId, retries, interaction) {
     logger.error("in getPlaybackData()");
     logger.error(error);
     if (isListener(userId)) {
-      if (error.status == 204) {
-        interaction.followUp(inactiveMessage());
+      if (error.status == 204 && getLeaderId() == userId) {
         interaction.followUp(`<@${userId}> disconnected!`);
         removeListener(userId);
         spotifyApi.resetAccessToken();
@@ -272,7 +271,6 @@ async function getPlaybackData(userId, retries, interaction) {
           if (updateIntervalId) clearInterval(updateIntervalId);
           updateOnInterval = false;
           logger.warn("RETRIES LEFT %d", retries);
-          syncing[userId] = true;
           await wait(delay || 3000);
           res = await getPlaybackData(userId, retries - 1, interaction);
         }
