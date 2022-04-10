@@ -258,7 +258,7 @@ async function getPlaybackData(userId, retries, interaction) {
     logger.error(error);
     if (isListener(userId)) {
       if (error.status == 204 && getLeaderId() == userId) {
-        interaction.followUp(`<@${userId}> disconnected!`);
+        lastMessage.reply(`<@${userId}> disconnected!`);
         removeListener(userId);
         spotifyApi.resetAccessToken();
         return;
@@ -277,7 +277,7 @@ async function getPlaybackData(userId, retries, interaction) {
         if (!res && !retries) {
           logger.error("LEADER TIMED OUT %d", userId);
           removeListener(userId);
-          interaction.followUp(`<@${userId}> disconnected!`);
+          lastMessage.reply(`<@${userId}> disconnected!`);
         } else if (res) {
           logger.info("Connection recieved");
           return res;
@@ -285,7 +285,7 @@ async function getPlaybackData(userId, retries, interaction) {
       } catch (error) {
         removeListener(userId);
         try {
-          interaction.followUp(`<@${userId}> disconnected!`);
+        lastMessage.reply(`<@${userId}> disconnected!`);
         } catch (error) {
           logger.error(error);
         }
@@ -592,8 +592,7 @@ async function refreshRemote(interaction) {
     if (followup) {
       const blank = blankMessage();
       try {
-        const temp = await interaction.followUp(message);
-        interaction.editReply(blank);
+        const temp = await lastMessage.reply(message);
         lastMessage.edit(blank);
         lastMessage = temp;
       } catch (error) {
