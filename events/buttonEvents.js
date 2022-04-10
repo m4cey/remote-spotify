@@ -119,8 +119,22 @@ buttons.likeButton = async (interaction) => {
   }
 };
 
-buttons.refreshButton = async () => {
-  methods.getRefreshOnce(false);
+buttons.backButton = async () => {
+  if (!methods.isListener(interaction.user.id)) return;
+  const listening = methods.getListening();
+  const spotifyApi = new SpotifyWebApi();
+  for (user of listening) {
+    try {
+      const token = await methods.getToken(user);
+      if (!token) throw "No token provided";
+      spotifyApi.setAccessToken(token);
+      methods.validateResponse(await spotifyApi.seek(0));
+    } catch (error) {
+      logger.error(error);
+    } finally {
+      spotifyApi.resetAccessToken();
+    }
+  }
 };
 
 buttons.playlistButton = async (interaction) => {

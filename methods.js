@@ -451,8 +451,8 @@ async function remoteMessage(data) {
       .setStyle("DANGER")
       .setDisabled(!userCount),
     new MessageButton()
-      .setCustomId("refresh")
-      .setLabel("🧍")
+      .setCustomId("back")
+      .setLabel("◀️")
       .setStyle("SECONDARY"),
     new MessageButton()
       .setCustomId("playlist")
