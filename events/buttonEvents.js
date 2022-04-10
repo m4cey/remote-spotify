@@ -128,7 +128,7 @@ buttons.backButton = async () => {
       const token = await methods.getToken(user);
       if (!token) throw "No token provided";
       spotifyApi.setAccessToken(token);
-      methods.validateResponse(await spotifyApi.seek(0));
+      methods.validateResponse(await spotifyApi.seek(1));
     } catch (error) {
       logger.error(error);
     } finally {
