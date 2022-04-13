@@ -257,12 +257,12 @@ async function getPlaybackData(userId, retries, interaction) {
     logger.error("in getPlaybackData()");
     logger.error(error);
     if (isListener(userId)) {
-      if (error.status == 204 && getLeaderId() == userId) {
-        lastMessage.reply(`<@${userId}> disconnected!`);
-        removeListener(userId);
-        spotifyApi.resetAccessToken();
-        return;
-      }
+      // if (error.status == 204 && getLeaderId() == userId) {
+      //   lastMessage.reply(`<@${userId}> disconnected!`);
+      //   removeListener(userId);
+      //   spotifyApi.resetAccessToken();
+      //   return;
+      // }
       try {
         const db = new StormDB(Engine);
         const delay = db.get("options.delay").value();
