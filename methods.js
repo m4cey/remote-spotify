@@ -838,6 +838,10 @@ function isAuthenticated(userId) {
 
 async function addListener(interaction, userId) {
   logger.debug("Adding listener " + userId);
+  if (methods.isListener(userId)) {
+    logger.debug("Already listening");
+    return;
+  }
   listening.push(userId);
   usernames[userId] = await getUsername(interaction, userId);
   updateOnInterval = true;
