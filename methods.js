@@ -838,7 +838,7 @@ function isAuthenticated(userId) {
 
 async function addListener(interaction, userId) {
   logger.debug("Adding listener " + userId);
-  if (methods.isListener(userId)) {
+  if (isListener(userId)) {
     logger.debug("Already listening");
     return;
   }
