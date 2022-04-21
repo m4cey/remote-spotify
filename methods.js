@@ -256,13 +256,7 @@ async function getPlaybackData(userId, retries, interaction) {
   } catch (error) {
     logger.error("in getPlaybackData()");
     logger.error(error);
-    if (isListener(userId)) {
-      // if (error.status == 204 && getLeaderId() == userId) {
-      //   lastMessage.reply(`<@${userId}> disconnected!`);
-      //   removeListener(userId);
-      //   spotifyApi.resetAccessToken();
-      //   return;
-      // }
+    if (getLeaderId() === userId) {
       try {
         const db = new StormDB(Engine);
         const delay = db.get("options.delay").value();
